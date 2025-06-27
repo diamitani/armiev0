@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Loader2 } from "lucide-react"
 import {
   Bot,
   Sparkles,
@@ -29,20 +30,27 @@ import {
 import Link from "next/link"
 
 export default function HomePage() {
-  const { user, isAuthenticated } = useAuth()
   const router = useRouter()
+  const { user, isAuthenticated, loading } = useAuth()
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/landing")
+    if (!loading) {
+      if (isAuthenticated) {
+        router.push("/dashboard")
+      } else {
+        router.push("/landing")
+      }
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, loading, router])
 
   // Show loading while checking auth
-  if (!isAuthenticated) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-armie-secondary"></div>
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin text-armie-secondary" />
+          <span className="text-muted-foreground">Loading...</span>
+        </div>
       </div>
     )
   }

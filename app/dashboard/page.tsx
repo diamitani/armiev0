@@ -2,6 +2,9 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
   Bot,
   Sparkles,
@@ -22,8 +25,11 @@ import {
   TrendingUp,
   Target,
   Calendar,
+  Plus,
+  Search,
 } from "lucide-react"
 import Link from "next/link"
+import { Input } from "@/components/ui/input"
 
 export default function Dashboard() {
   // All AI Assistants/Agents
@@ -240,29 +246,99 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-armie-primary/5">
-      <div className="container mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <Bot className="w-12 h-12 text-armie-secondary mr-4" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-armie-secondary to-purple-400 bg-clip-text text-transparent">
-              AI Agent Dashboard
-            </h1>
+    <div className="flex flex-1 flex-col">
+      {/* Header */}
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <div className="flex items-center gap-2 flex-1">
+          <Bot className="w-6 h-6 text-armie-secondary" />
+          <h1 className="text-xl font-bold bg-gradient-to-r from-armie-secondary to-purple-400 bg-clip-text text-transparent">
+            AI Agent Dashboard
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input placeholder="Search assistants..." className="pl-8 w-64" />
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Your complete suite of specialized AI assistants for music career management
-          </p>
-          <div className="flex items-center justify-center mt-6 space-x-4">
-            <Badge className="bg-armie-secondary/20 text-armie-secondary border-armie-secondary/30 px-4 py-2">
-              {aiAgents.length} AI Agents Available
-            </Badge>
-            <Badge className="bg-armie-primary text-armie-accent px-4 py-2">All Systems Online</Badge>
+          <Button size="sm" className="bg-armie-primary hover:bg-armie-primary/90">
+            <Plus className="h-4 w-4 mr-2" />
+            New Chat
+          </Button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 p-6 bg-gradient-to-br from-background via-background to-armie-primary/5">
+        {/* Stats Overview */}
+        <div className="mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-gradient-to-r from-armie-secondary/10 to-armie-primary/10 border-armie-secondary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Assistants</p>
+                    <p className="text-2xl font-bold text-armie-primary">{aiAgents.length}</p>
+                  </div>
+                  <Bot className="h-8 w-8 text-armie-secondary" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border-emerald-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Active Today</p>
+                    <p className="text-2xl font-bold text-emerald-600">12</p>
+                  </div>
+                  <Sparkles className="h-8 w-8 text-emerald-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-blue-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Messages Today</p>
+                    <p className="text-2xl font-bold text-blue-600">247</p>
+                  </div>
+                  <MessageSquare className="h-8 w-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-purple-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Tasks Created</p>
+                    <p className="text-2xl font-bold text-purple-600">34</p>
+                  </div>
+                  <Target className="h-8 w-8 text-purple-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-lg text-muted-foreground">
+                Your complete suite of specialized AI assistants for music career management
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-armie-secondary/20 text-armie-secondary border-armie-secondary/30 px-3 py-1">
+                All Systems Online
+              </Badge>
+            </div>
           </div>
         </div>
 
         {/* AI Agents Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {aiAgents.map((agent, index) => (
             <Link key={index} href={agent.href} className="group">
               <Card className="relative aspect-square border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-card/80 backdrop-blur-sm overflow-hidden">
@@ -278,24 +354,24 @@ export default function Dashboard() {
                   </Badge>
                 </div>
 
-                <CardContent className="p-6 h-full flex flex-col items-center justify-center text-center relative z-10">
+                <CardContent className="p-4 h-full flex flex-col items-center justify-center text-center relative z-10">
                   {/* Icon */}
                   <div
-                    className={`w-16 h-16 rounded-2xl ${agent.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm`}
+                    className={`w-12 h-12 rounded-xl ${agent.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm`}
                   >
-                    <agent.icon className={`w-8 h-8 ${agent.textColor}`} />
+                    <agent.icon className={`w-6 h-6 ${agent.textColor}`} />
                   </div>
 
                   {/* Content */}
-                  <div className="space-y-2">
-                    <h3 className="font-bold text-sm text-foreground group-hover:text-armie-secondary transition-colors duration-300 leading-tight">
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-xs text-foreground group-hover:text-armie-secondary transition-colors duration-300 leading-tight">
                       {agent.name}
                     </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{agent.description}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{agent.description}</p>
                   </div>
 
                   {/* Hover Effect Indicator */}
-                  <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-armie-secondary rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-armie-secondary rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </CardContent>
               </Card>
             </Link>
@@ -303,7 +379,7 @@ export default function Dashboard() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-16">
+        <div className="text-center mt-12">
           <p className="text-muted-foreground">
             Powered by <span className="font-semibold text-armie-secondary">Armie AI</span> • Your intelligent music
             career companion
