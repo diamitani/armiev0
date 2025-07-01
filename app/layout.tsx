@@ -4,13 +4,13 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Armie - AI Music Career Manager",
-  description: "Your comprehensive AI-powered music career management platform",
+  title: "Armie - AI Music Career Assistant",
+  description: "Your intelligent companion for music career success",
     generator: 'v0.dev'
 }
 

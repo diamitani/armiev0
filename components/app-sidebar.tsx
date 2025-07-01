@@ -1,134 +1,186 @@
 "use client"
 
 import type * as React from "react"
-import { usePathname } from "next/navigation"
 import {
-  Bot,
-  FileText,
+  AudioWaveform,
+  Command,
   GalleryVerticalEnd,
-  SquareTerminal,
-  Users,
-  Building,
-  GraduationCap,
-  FileCodeIcon as FileContract,
-  Mic,
-  Share2,
-  BarChart3,
+  FileText,
+  Home,
+  Brain,
+  Briefcase,
+  Music,
+  MessageSquare,
+  Sparkles,
+  Settings,
+  HelpCircle,
+  PenTool,
   Palette,
-  UserPlus,
+  Share2,
+  Radio,
+  Mail,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
-import { useAuth } from "@/components/auth-provider"
 
-// This is sample data.
 const data = {
   user: {
-    name: "Artist Name",
-    email: "artist@example.com",
+    name: "Alex Rivera",
+    email: "alex@armiemusic.com",
     avatar: "/placeholder-user.jpg",
   },
   teams: [
     {
-      name: "Armie Artist Manager",
+      name: "ARMIE Studio",
       logo: GalleryVerticalEnd,
-      plan: "Enterprise",
+      plan: "Personal",
+    },
+    {
+      name: "Independent Artist",
+      logo: AudioWaveform,
+      plan: "Personal",
+    },
+    {
+      name: "Music Collective",
+      logo: Command,
+      plan: "Personal",
     },
   ],
   navMain: [
     {
       title: "Dashboard",
       url: "/dashboard",
-      icon: SquareTerminal,
+      icon: Home,
       isActive: true,
+      description: "Your main workspace",
     },
     {
-      title: "Contracts Hub",
-      url: "/dashboard/contracts",
-      icon: FileContract,
-      badge: "3 pending",
+      title: "ARMIE",
+      url: "/dashboard",
+      icon: MessageSquare,
+      description: "AI music career assistant",
     },
     {
-      title: "Publishing Hub",
-      url: "/dashboard/publishing",
-      icon: Building,
-      badge: "$2,450",
-    },
-    {
-      title: "Directory Hub",
-      url: "/dashboard/directory",
-      icon: Users,
-      badge: "127 contacts",
-    },
-    {
-      title: "Academy Hub",
-      url: "/dashboard/academy",
-      icon: GraduationCap,
-      badge: "2 in progress",
-    },
-    {
-      title: "Assistants Hub",
+      title: "AI Assistants",
       url: "/dashboard/assistants",
-      icon: Bot,
-      badge: "8 tools",
+      icon: Sparkles,
+      items: [
+        {
+          title: "ARMIE Chat",
+          url: "/dashboard",
+          icon: MessageSquare,
+          description: "Your personal music career assistant",
+        },
+        {
+          title: "Lyric Generator",
+          url: "/dashboard/assistants/lyric-generator",
+          icon: PenTool,
+          description: "AI-powered songwriting tool",
+        },
+        {
+          title: "Cover Art Generator",
+          url: "/dashboard/assistants/cover-art-generator",
+          icon: Palette,
+          description: "Create stunning album artwork",
+        },
+        {
+          title: "Social Media Assistant",
+          url: "/dashboard/assistants/social-media-assistant",
+          icon: Share2,
+          description: "Optimize your social presence",
+        },
+        {
+          title: "Artist Bio Generator",
+          url: "/dashboard/assistants/artist-bio-generator",
+          icon: FileText,
+          description: "Professional artist biographies",
+        },
+        {
+          title: "Press Release Generator",
+          url: "/dashboard/assistants/press-release-generator",
+          icon: Radio,
+          description: "Create professional press releases",
+        },
+        {
+          title: "Email Generator",
+          url: "/dashboard/assistants/email-generator",
+          icon: Mail,
+          description: "Craft professional emails",
+        },
+      ],
+    },
+    {
+      title: "Contracts",
+      url: "/dashboard/contracts",
+      icon: FileText,
+      description: "Manage your agreements",
+      items: [
+        {
+          title: "All Contracts",
+          url: "/dashboard/contracts",
+          icon: FileText,
+          description: "View all your contracts",
+        },
+        {
+          title: "Templates",
+          url: "/dashboard/contracts/templates",
+          icon: Briefcase,
+          description: "Pre-built contract templates",
+        },
+        {
+          title: "Contract Wizard",
+          url: "/dashboard/contracts/wizard",
+          icon: Sparkles,
+          description: "AI-guided contract creation",
+        },
+      ],
+    },
+    {
+      title: "Publishing Center",
+      url: "/dashboard/publishing",
+      icon: Music,
+      description: "Distribution & royalties",
     },
   ],
-  projects: [
+  quickActions: [
     {
-      name: "Lyric Generator",
-      url: "/dashboard/assistants/lyric-generator",
-      icon: Mic,
+      title: "Knowledge Base",
+      url: "/knowledge-base",
+      icon: Brain,
+      description: "Search resources",
     },
     {
-      name: "Social Media Assistant",
-      url: "/dashboard/assistants/social-media-assistant",
-      icon: Share2,
+      title: "Settings",
+      url: "/dashboard/settings",
+      icon: Settings,
+      description: "Account preferences",
     },
     {
-      name: "Artist Bio Generator",
-      url: "/dashboard/assistants/artist-bio-generator",
-      icon: FileText,
-    },
-    {
-      name: "Analytics Advisor",
-      url: "/dashboard/assistants/analytics-advisor",
-      icon: BarChart3,
-      isPremium: true,
-    },
-    {
-      name: "Cover Art Creator",
-      url: "/dashboard/assistants/cover-art-creator",
-      icon: Palette,
-      isPremium: true,
-    },
-    {
-      name: "Collaboration Finder",
-      url: "/dashboard/assistants/collaboration-finder",
-      icon: UserPlus,
-      isPremium: true,
+      title: "Help & Support",
+      url: "/dashboard/help",
+      icon: HelpCircle,
+      description: "Get assistance",
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth()
-  const pathname = usePathname()
-
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+    <Sidebar collapsible="icon" className="border-r border-slate-200 bg-slate-50/50 backdrop-blur-sm" {...props}>
+      <SidebarHeader className="border-b border-slate-200/60 bg-white/80 backdrop-blur-sm">
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="bg-slate-50/30">
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <div className="mt-auto">
+          <NavMain items={data.quickActions} title="Quick Actions" />
+        </div>
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user || data.user} />
+      <SidebarFooter className="border-t border-slate-200/60 bg-white/80 backdrop-blur-sm">
+        <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

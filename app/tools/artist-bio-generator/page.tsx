@@ -1,231 +1,448 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Users, Download, Copy, RefreshCw, Sparkles } from "lucide-react"
-import Link from "next/link"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FileText, User, Copy, Download, RefreshCw, Sparkles, Award, Music, MapPin } from "lucide-react"
+import { toast } from "sonner"
 
-export default function ArtistBioGenerator() {
-  const [isGenerating, setIsGenerating] = useState(false)
+export default function ArtistBioGeneratorPage() {
+  const [formData, setFormData] = useState({
+    artistName: "",
+    genre: "",
+    location: "",
+    yearsActive: "",
+    achievements: "",
+    influences: "",
+    currentProjects: "",
+    personalStory: "",
+    bioType: "short",
+    tone: "professional",
+  })
   const [generatedBio, setGeneratedBio] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleGenerate = async () => {
+  const bioTypes = [
+    { value: "short", label: "Short Bio (50-100 words)" },
+    { value: "medium", label: "Medium Bio (150-250 words)" },
+    { value: "long", label: "Long Bio (300-500 words)" },
+    { value: "press", label: "Press Release Bio" },
+    { value: "social", label: "Social Media Bio" },
+  ]
+
+  const tones = [
+    { value: "professional", label: "Professional" },
+    { value: "casual", label: "Casual & Friendly" },
+    { value: "artistic", label: "Artistic & Creative" },
+    { value: "edgy", label: "Edgy & Bold" },
+    { value: "inspirational", label: "Inspirational" },
+  ]
+
+  const genres = [
+    "Pop",
+    "Rock",
+    "Hip-Hop",
+    "R&B",
+    "Country",
+    "Folk",
+    "Electronic",
+    "Jazz",
+    "Blues",
+    "Reggae",
+    "Punk",
+    "Metal",
+    "Indie",
+    "Alternative",
+    "Classical",
+  ]
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const generateBio = async () => {
+    if (!formData.artistName.trim()) {
+      toast.error("Please enter your artist name")
+      return
+    }
+
     setIsGenerating(true)
-    setTimeout(() => {
-      setGeneratedBio(`Alex Rodriguez is an emerging indie-pop artist whose introspective lyrics and atmospheric soundscapes have been captivating audiences across the digital landscape. Born and raised in Austin, Texas, Alex discovered their passion for music at age 12 when they first picked up a guitar, leading to years of songwriting that would eventually shape their distinctive artistic voice.
+    try {
+      const prompt = `Create a ${formData.bioType} artist biography with the following information:
 
-Drawing inspiration from artists like Phoebe Bridgers, The 1975, and Bon Iver, Alex creates music that explores themes of personal growth, relationships, and the complexities of modern life. Their debut single "Midnight Dreams" garnered over 100,000 streams within its first month, establishing them as an artist to watch in the indie music scene.
+Artist Name: ${formData.artistName}
+Genre: ${formData.genre || "Not specified"}
+Location: ${formData.location || "Not specified"}
+Years Active: ${formData.yearsActive || "Not specified"}
+Key Achievements: ${formData.achievements || "None specified"}
+Musical Influences: ${formData.influences || "Not specified"}
+Current Projects: ${formData.currentProjects || "Not specified"}
+Personal Story: ${formData.personalStory || "Not specified"}
 
-Alex's music is characterized by lush production, thoughtful arrangements, and vocals that seamlessly blend vulnerability with strength. They write, produce, and perform all their material, showcasing a level of artistic control that's rare among emerging artists.
+Bio Type: ${formData.bioType}
+Tone: ${formData.tone}
 
-Currently working on their debut EP, Alex continues to build a dedicated fanbase through authentic storytelling and genuine connection with their audience. When not in the studio, they can be found exploring Austin's vibrant music scene and collaborating with other local artists.`)
+Requirements:
+- Make it engaging and professional
+- Highlight unique aspects of the artist
+- Include relevant achievements and background
+- Make it suitable for ${formData.bioType === "press" ? "press releases and media kits" : formData.bioType === "social" ? "social media profiles" : "general promotional use"}
+- Keep the tone ${formData.tone}
+- Focus on what makes this artist special and memorable
+
+Please write a compelling biography that tells the artist's story effectively.`
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }],
+          assistantType: "artist-bio-generator",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate bio")
+      }
+
+      const data = await response.json()
+      setGeneratedBio(data.content)
+      toast.success("Artist bio generated successfully!")
+    } catch (error) {
+      console.error("Error generating bio:", error)
+      toast.error("Failed to generate bio. Please try again.")
+    } finally {
       setIsGenerating(false)
-    }, 2000)
+    }
+  }
+
+  const copyBio = async () => {
+    if (!generatedBio) return
+
+    try {
+      await navigator.clipboard.writeText(generatedBio)
+      toast.success("Bio copied to clipboard!")
+    } catch (error) {
+      toast.error("Failed to copy bio")
+    }
+  }
+
+  const downloadBio = () => {
+    if (!generatedBio) return
+
+    const element = document.createElement("a")
+    const file = new Blob([generatedBio], { type: "text/plain" })
+    element.href = URL.createObjectURL(file)
+    element.download = `${formData.artistName.replace(/[^a-z0-9]/gi, "_")}_bio.txt`
+    document.body.appendChild(element)
+    element.click()
+    document.body.removeChild(element)
+    toast.success("Bio downloaded!")
   }
 
   return (
-    <div className="space-y-6 p-6 bg-armie-accent/30 min-h-screen">
-      <div className="flex items-center space-x-4">
-        <Link href="/">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </Link>
-      </div>
-
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4">
-          <div className="p-3 rounded-lg bg-indigo-100 text-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-400">
-            <Users className="h-8 w-8" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight armie-primary">Artist Bio Generator</h1>
-            <p className="text-muted-foreground">Create compelling artist biographies for press and promotional use</p>
-            <div className="flex items-center space-x-2 mt-2">
-              <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-400">
-                Media & Promotion
-              </Badge>
-              <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-950/30 dark:text-gray-400">Low Usage</Badge>
-            </div>
-          </div>
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center">
+            <FileText className="w-8 h-8 mr-3 text-green-600" />
+            Artist Bio Generator
+          </h1>
+          <p className="text-muted-foreground">Create compelling artist biographies and press materials</p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="armie-primary">Create Artist Bio</CardTitle>
-              <CardDescription>Generate professional biographies for different platforms and purposes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+      <Tabs defaultValue="create" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="create">Create Bio</TabsTrigger>
+          <TabsTrigger value="tips">Writing Tips</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="create" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Input Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <User className="w-5 h-5 mr-2 text-green-600" />
+                  Artist Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium armie-primary">Bio Length</label>
-                    <Select>
+                    <Label htmlFor="artistName">Artist Name *</Label>
+                    <Input
+                      id="artistName"
+                      placeholder="Your artist name"
+                      value={formData.artistName}
+                      onChange={(e) => handleInputChange("artistName", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Genre</Label>
+                    <Select value={formData.genre} onValueChange={(value) => handleInputChange("genre", value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select length" />
+                        <SelectValue placeholder="Select genre" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="short">Short (50-100 words)</SelectItem>
-                        <SelectItem value="medium">Medium (150-250 words)</SelectItem>
-                        <SelectItem value="long">Long (300-500 words)</SelectItem>
+                        {genres.map((genre) => (
+                          <SelectItem key={genre} value={genre.toLowerCase()}>
+                            {genre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      placeholder="City, State/Country"
+                      value={formData.location}
+                      onChange={(e) => handleInputChange("location", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="yearsActive">Years Active</Label>
+                    <Input
+                      id="yearsActive"
+                      placeholder="e.g., 2018-present"
+                      value={formData.yearsActive}
+                      onChange={(e) => handleInputChange("yearsActive", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Bio Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Bio Type</Label>
+                    <Select value={formData.bioType} onValueChange={(value) => handleInputChange("bioType", value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bioTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium armie-primary">Purpose</label>
-                    <Select>
+                    <Label>Tone</Label>
+                    <Select value={formData.tone} onValueChange={(value) => handleInputChange("tone", value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select purpose" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="press">Press Release</SelectItem>
-                        <SelectItem value="website">Website/EPK</SelectItem>
-                        <SelectItem value="social">Social Media</SelectItem>
-                        <SelectItem value="booking">Booking/Venues</SelectItem>
-                        <SelectItem value="streaming">Streaming Platforms</SelectItem>
+                        {tones.map((tone) => (
+                          <SelectItem key={tone.value} value={tone.value}>
+                            {tone.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
+                {/* Detailed Info */}
                 <div>
-                  <label className="text-sm font-medium armie-primary">Artist Name</label>
-                  <Input placeholder="Your stage/artist name" />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium armie-primary">Genre/Style</label>
-                  <Input placeholder="e.g., Indie Pop, Electronic, Hip-Hop, Folk" />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium armie-primary">Background & Origin</label>
+                  <Label htmlFor="achievements">Key Achievements</Label>
                   <Textarea
-                    placeholder="Where are you from? How did you start making music? Key life experiences..."
-                    rows={3}
+                    id="achievements"
+                    placeholder="Awards, chart positions, notable performances, collaborations..."
+                    value={formData.achievements}
+                    onChange={(e) => handleInputChange("achievements", e.target.value)}
+                    rows={2}
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium armie-primary">Musical Influences</label>
-                  <Input placeholder="Artists that inspire you (e.g., Radiohead, Billie Eilish, Kendrick Lamar)" />
+                  <Label htmlFor="influences">Musical Influences</Label>
+                  <Textarea
+                    id="influences"
+                    placeholder="Artists, genres, or experiences that influence your music..."
+                    value={formData.influences}
+                    onChange={(e) => handleInputChange("influences", e.target.value)}
+                    rows={2}
+                  />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium armie-primary">Achievements & Releases</label>
+                  <Label htmlFor="currentProjects">Current Projects</Label>
                   <Textarea
-                    placeholder="Notable releases, streaming numbers, performances, awards, collaborations..."
+                    id="currentProjects"
+                    placeholder="Upcoming releases, tours, collaborations..."
+                    value={formData.currentProjects}
+                    onChange={(e) => handleInputChange("currentProjects", e.target.value)}
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="personalStory">Personal Story</Label>
+                  <Textarea
+                    id="personalStory"
+                    placeholder="Your musical journey, background, what makes you unique..."
+                    value={formData.personalStory}
+                    onChange={(e) => handleInputChange("personalStory", e.target.value)}
                     rows={3}
                   />
                 </div>
 
+                {/* Generate Button */}
                 <Button
-                  className="w-full bg-armie-secondary hover:bg-armie-secondary/80 text-armie-primary"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
+                  onClick={generateBio}
+                  disabled={!formData.artistName.trim() || isGenerating}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  size="lg"
                 >
                   {isGenerating ? (
                     <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                       Generating Bio...
                     </>
                   ) : (
                     <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Generate Artist Bio
+                      <FileText className="w-4 h-4 mr-2" />
+                      Generate Bio
                     </>
                   )}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {generatedBio && (
-            <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm mt-6">
+            {/* Output Section */}
+            <Card>
               <CardHeader>
-                <CardTitle className="armie-primary">Generated Bio</CardTitle>
-                <CardDescription>Your professional artist biography</CardDescription>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    <Sparkles className="w-5 h-5 mr-2 text-green-600" />
+                    Generated Bio
+                  </CardTitle>
+                  {generatedBio && (
+                    <div className="flex items-center space-x-2">
+                      <Button variant="outline" size="sm" onClick={copyBio}>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={downloadBio}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-armie-accent/50 rounded-lg border">
-                    <p className="text-sm armie-primary leading-relaxed">{generatedBio}</p>
+                {generatedBio ? (
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 rounded-lg p-4 min-h-[400px]">
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">{generatedBio}</div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">{generatedBio.split(" ").length} words</span>
+                        <span className="text-sm text-muted-foreground">•</span>
+                        <span className="text-sm text-muted-foreground capitalize">{formData.bioType} bio</span>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={generateBio} disabled={isGenerating}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy Bio
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Regenerate
-                    </Button>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <FileText className="w-16 h-16 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Ready to Create Your Bio</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md">
+                      Fill in your artist information above and click "Generate Bio" to create your professional
+                      biography.
+                    </p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tips" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Award className="w-5 h-5 mr-2 text-yellow-600" />
+                  Bio Essentials
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <p>• Start with your name and genre</p>
+                  <p>• Include your location and background</p>
+                  <p>• Highlight key achievements</p>
+                  <p>• Mention current projects</p>
+                  <p>• Keep it concise and engaging</p>
+                  <p>• End with a call to action</p>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
 
-        <div className="space-y-6">
-          <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="armie-primary">Bio Types</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-armie-secondary/10 rounded-lg">
-                  <h4 className="font-medium armie-primary text-sm">Press Bio</h4>
-                  <p className="text-xs text-muted-foreground">Professional, third-person, includes achievements</p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Music className="w-5 h-5 mr-2 text-purple-600" />
+                  Writing Style
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <p>• Write in third person</p>
+                  <p>• Use active voice</p>
+                  <p>• Be specific with details</p>
+                  <p>• Show, don't just tell</p>
+                  <p>• Include personality</p>
+                  <p>• Avoid clichés</p>
                 </div>
-                <div className="p-3 bg-armie-secondary/10 rounded-lg">
-                  <h4 className="font-medium armie-primary text-sm">Social Bio</h4>
-                  <p className="text-xs text-muted-foreground">Casual, engaging, personality-focused</p>
-                </div>
-                <div className="p-3 bg-armie-secondary/10 rounded-lg">
-                  <h4 className="font-medium armie-primary text-sm">Booking Bio</h4>
-                  <p className="text-xs text-muted-foreground">Performance history, audience appeal</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="armie-primary">Tips</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {[
-                  "Keep it authentic and personal",
-                  "Include specific achievements",
-                  "Mention your unique sound",
-                  "Add your origin story",
-                  "Update regularly with new releases",
-                ].map((tip, index) => (
-                  <li key={index} className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-armie-secondary rounded-full" />
-                    <span className="text-sm">{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MapPin className="w-5 h-5 mr-2 text-blue-600" />
+                  Different Uses
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <p>• Press releases (formal)</p>
+                  <p>• Social media (casual)</p>
+                  <p>• Website about page</p>
+                  <p>• Streaming platforms</p>
+                  <p>• Grant applications</p>
+                  <p>• Booking inquiries</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

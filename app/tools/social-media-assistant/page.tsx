@@ -1,230 +1,399 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Share2, Download, Copy, RefreshCw, Sparkles } from "lucide-react"
-import Link from "next/link"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Share2, Instagram, Twitter, Music, Copy, RefreshCw, Sparkles, TrendingUp, Calendar, Hash } from "lucide-react"
+import { toast } from "sonner"
 
-export default function SocialMediaAssistant() {
-  const [isGenerating, setIsGenerating] = useState(false)
+export default function SocialMediaAssistantPage() {
+  const [platform, setPlatform] = useState("instagram")
+  const [contentType, setContentType] = useState("post")
+  const [topic, setTopic] = useState("")
+  const [tone, setTone] = useState("")
   const [generatedContent, setGeneratedContent] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleGenerate = async () => {
+  const platforms = [
+    { value: "instagram", label: "Instagram", icon: Instagram },
+    { value: "twitter", label: "Twitter/X", icon: Twitter },
+    { value: "tiktok", label: "TikTok", icon: Music },
+    { value: "facebook", label: "Facebook", icon: Share2 },
+  ]
+
+  const contentTypes = [
+    { value: "post", label: "Regular Post" },
+    { value: "story", label: "Story" },
+    { value: "reel", label: "Reel/Video" },
+    { value: "caption", label: "Caption Only" },
+    { value: "hashtags", label: "Hashtags" },
+    { value: "bio", label: "Bio/Profile" },
+  ]
+
+  const tones = [
+    { value: "casual", label: "Casual & Friendly" },
+    { value: "professional", label: "Professional" },
+    { value: "energetic", label: "Energetic & Hype" },
+    { value: "inspirational", label: "Inspirational" },
+    { value: "humorous", label: "Humorous" },
+    { value: "authentic", label: "Authentic & Personal" },
+  ]
+
+  const generateContent = async () => {
+    if (!topic.trim()) {
+      toast.error("Please enter a topic for your social media content")
+      return
+    }
+
     setIsGenerating(true)
-    // Simulate AI generation
-    setTimeout(() => {
-      setGeneratedContent(`🎵 Just dropped my latest single "Midnight Dreams" and I'm feeling incredible! This track represents months of late-night studio sessions and pure creative flow. 
+    try {
+      const prompt = `Create ${contentType} content for ${platform} about: ${topic}
 
-The melody came to me during a 3am walk through the city, and I knew I had to capture that feeling. Special thanks to my producer @StudioMagic for bringing this vision to life! 
+Platform: ${platform}
+Content Type: ${contentType}
+Tone: ${tone || "casual and engaging"}
 
-Stream it now on all platforms 🔥
-#NewMusic #MidnightDreams #IndieArtist #MusicProducer #StudioLife`)
+Requirements:
+- Make it engaging and shareable
+- Include relevant hashtags if appropriate
+- Keep it platform-appropriate (character limits, style, etc.)
+- Make it authentic to a musician/artist's voice
+- Include call-to-action when relevant
+
+Please provide creative, engaging content that will help grow the artist's social media presence.`
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }],
+          assistantType: "social-media-assistant",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate content")
+      }
+
+      const data = await response.json()
+      setGeneratedContent(data.content)
+      toast.success("Social media content generated!")
+    } catch (error) {
+      console.error("Error generating content:", error)
+      toast.error("Failed to generate content. Please try again.")
+    } finally {
       setIsGenerating(false)
-    }, 2000)
+    }
   }
 
-  return (
-    <div className="space-y-6 p-6 bg-armie-accent/30 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        <Link href="/">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </Link>
-      </div>
+  const copyContent = async () => {
+    if (!generatedContent) return
 
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4">
-          <div className="p-3 rounded-lg bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400">
-            <Share2 className="h-8 w-8" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight armie-primary">Social Media Assistant</h1>
-            <p className="text-muted-foreground">Create engaging social media content and build your online presence</p>
-            <div className="flex items-center space-x-2 mt-2">
-              <Badge className="bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400">
-                Media & Promotion
-              </Badge>
-              <Badge className="bg-armie-secondary/20 text-armie-primary">Daily Usage</Badge>
-            </div>
-          </div>
+    try {
+      await navigator.clipboard.writeText(generatedContent)
+      toast.success("Content copied to clipboard!")
+    } catch (error) {
+      toast.error("Failed to copy content")
+    }
+  }
+
+  const exampleTopics = [
+    "New single release announcement",
+    "Behind the scenes in the studio",
+    "Upcoming live performance",
+    "Music inspiration and creative process",
+    "Fan appreciation post",
+    "Collaboration announcement",
+    "Music industry tips for artists",
+    "Personal story about songwriting",
+  ]
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center">
+            <Share2 className="w-8 h-8 mr-3 text-blue-600" />
+            Social Media Assistant
+          </h1>
+          <p className="text-muted-foreground">Create engaging social media content that grows your fanbase</p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Tool Interface */}
-        <div className="lg:col-span-2">
-          <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="armie-primary">Create Social Media Content</CardTitle>
-              <CardDescription>Generate engaging posts for your social media platforms</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium armie-primary">Platform</label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select platform" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="twitter">Twitter/X</SelectItem>
-                        <SelectItem value="facebook">Facebook</SelectItem>
-                        <SelectItem value="tiktok">TikTok</SelectItem>
-                        <SelectItem value="linkedin">LinkedIn</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium armie-primary">Content Type</label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="announcement">New Release Announcement</SelectItem>
-                        <SelectItem value="behind-scenes">Behind the Scenes</SelectItem>
-                        <SelectItem value="personal">Personal Update</SelectItem>
-                        <SelectItem value="promotional">Promotional</SelectItem>
-                        <SelectItem value="engagement">Fan Engagement</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+      <Tabs defaultValue="create" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="create">Create Content</TabsTrigger>
+          <TabsTrigger value="strategy">Strategy Tips</TabsTrigger>
+          <TabsTrigger value="analytics">Growth Insights</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="create" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Input Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Sparkles className="w-5 h-5 mr-2 text-blue-600" />
+                  Content Parameters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Platform Selection */}
+                <div>
+                  <Label>Platform *</Label>
+                  <Select value={platform} onValueChange={setPlatform}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {platforms.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          <div className="flex items-center">
+                            <p.icon className="w-4 h-4 mr-2" />
+                            {p.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
+                {/* Content Type */}
                 <div>
-                  <label className="text-sm font-medium armie-primary">Topic/Event</label>
-                  <Input placeholder="What are you posting about? (e.g., new single release, studio session)" />
+                  <Label>Content Type *</Label>
+                  <Select value={contentType} onValueChange={setContentType}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contentTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
+                {/* Topic */}
                 <div>
-                  <label className="text-sm font-medium armie-primary">Key Details</label>
+                  <Label htmlFor="topic">Topic/Content Idea *</Label>
                   <Textarea
-                    placeholder="Provide key information: song title, collaborators, release date, streaming platforms, etc."
+                    id="topic"
+                    placeholder="What do you want to post about?"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
                     rows={3}
+                    className="mt-2"
                   />
                 </div>
 
+                {/* Tone */}
                 <div>
-                  <label className="text-sm font-medium armie-primary">Brand Voice & Tone</label>
-                  <Textarea
-                    placeholder="Describe your brand personality (e.g., authentic, energetic, introspective, professional)"
-                    rows={2}
-                  />
+                  <Label>Tone & Style</Label>
+                  <Select value={tone} onValueChange={setTone}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select tone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tones.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
+                {/* Generate Button */}
                 <Button
-                  className="w-full bg-armie-secondary hover:bg-armie-secondary/80 text-armie-primary"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
+                  onClick={generateContent}
+                  disabled={!topic.trim() || isGenerating}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  size="lg"
                 >
                   {isGenerating ? (
                     <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Content...
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Creating Content...
                     </>
                   ) : (
                     <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Generate Social Media Post
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Generate Content
                     </>
                   )}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Generated Content */}
-          {generatedContent && (
-            <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm mt-6">
-              <CardHeader>
-                <CardTitle className="armie-primary">Generated Content</CardTitle>
-                <CardDescription>Your AI-generated social media post</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-armie-accent/50 rounded-lg border">
-                    <pre className="whitespace-pre-wrap text-sm armie-primary">{generatedContent}</pre>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy Text
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Regenerate
-                    </Button>
+                {/* Example Topics */}
+                <div>
+                  <Label className="text-sm font-medium">Quick Ideas</Label>
+                  <div className="grid grid-cols-1 gap-2 mt-2">
+                    {exampleTopics.map((example, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTopic(example)}
+                        className="justify-start text-left h-auto py-2 px-3"
+                      >
+                        <span className="text-xs">{example}</span>
+                      </Button>
+                    ))}
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
 
-        {/* Tool Info */}
-        <div className="space-y-6">
-          <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+            {/* Output Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    <Share2 className="w-5 h-5 mr-2 text-blue-600" />
+                    Generated Content
+                  </CardTitle>
+                  {generatedContent && (
+                    <Button variant="outline" size="sm" onClick={copyContent}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {generatedContent ? (
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 rounded-lg p-4 min-h-[400px]">
+                      <pre className="whitespace-pre-wrap text-sm leading-relaxed">{generatedContent}</pre>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className="capitalize">
+                        {platform} • {contentType}
+                      </Badge>
+                      <Button variant="outline" size="sm" onClick={generateContent} disabled={isGenerating}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Share2 className="w-16 h-16 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Ready to Create Content</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md">
+                      Choose your platform, content type, and topic to generate engaging social media content.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="strategy" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
+                  Growth Strategies
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <p>• Post consistently (3-5 times per week)</p>
+                  <p>• Engage with your audience daily</p>
+                  <p>• Use trending hashtags and sounds</p>
+                  <p>• Share behind-the-scenes content</p>
+                  <p>• Collaborate with other artists</p>
+                  <p>• Cross-promote on all platforms</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Calendar className="w-5 h-5 mr-2 text-purple-600" />
+                  Content Calendar
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <p>• Monday: Motivation Monday</p>
+                  <p>• Tuesday: New Music Tuesday</p>
+                  <p>• Wednesday: Behind the Scenes</p>
+                  <p>• Thursday: Throwback Thursday</p>
+                  <p>• Friday: New Release Friday</p>
+                  <p>• Weekend: Personal/Lifestyle</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Hash className="w-5 h-5 mr-2 text-blue-600" />
+                  Hashtag Strategy
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <p>• Mix popular and niche hashtags</p>
+                  <p>• Use 5-10 hashtags per post</p>
+                  <p>• Create a branded hashtag</p>
+                  <p>• Research trending music tags</p>
+                  <p>• Include location-based tags</p>
+                  <p>• Track hashtag performance</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="armie-primary">Features</CardTitle>
+              <CardTitle>Social Media Growth Insights</CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                {[
-                  "Multi-platform content optimization",
-                  "Brand voice consistency",
-                  "Hashtag recommendations",
-                  "Engagement-focused copy",
-                  "Content calendar planning",
-                  "Performance analytics insights",
-                ].map((feature, index) => (
-                  <li key={index} className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-armie-secondary rounded-full" />
-                    <span className="text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="armie-primary">Best Practices</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-armie-secondary/10 rounded-lg">
-                  <h4 className="font-medium armie-primary text-sm">Authenticity</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Keep your unique voice while optimizing for engagement
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Key Metrics to Track</h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>• Engagement Rate (likes, comments, shares)</p>
+                    <p>• Reach and Impressions</p>
+                    <p>• Follower Growth Rate</p>
+                    <p>• Click-through Rate to Music</p>
+                    <p>• Story Completion Rate</p>
+                    <p>• Save/Share Rate</p>
+                  </div>
                 </div>
-                <div className="p-3 bg-armie-secondary/10 rounded-lg">
-                  <h4 className="font-medium armie-primary text-sm">Consistency</h4>
-                  <p className="text-xs text-muted-foreground">Maintain regular posting schedule and brand voice</p>
-                </div>
-                <div className="p-3 bg-armie-secondary/10 rounded-lg">
-                  <h4 className="font-medium armie-primary text-sm">Engagement</h4>
-                  <p className="text-xs text-muted-foreground">Include calls-to-action and conversation starters</p>
+                <div>
+                  <h4 className="font-semibold mb-3">Best Posting Times</h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>• Instagram: 6-9 AM, 12-2 PM, 5-7 PM</p>
+                    <p>• TikTok: 6-10 AM, 7-9 PM</p>
+                    <p>• Twitter: 8-10 AM, 7-9 PM</p>
+                    <p>• Facebook: 9 AM-10 AM, 3-4 PM</p>
+                    <p>• Test different times for your audience</p>
+                    <p>• Use analytics to find your optimal times</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

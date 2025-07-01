@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/components/auth-provider"
 import { PenTool, Sparkles, Download, Copy, RefreshCw, Music, Heart, Zap, Crown, Save, Share } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
 
 export default function LyricGeneratorPage() {
   const { user } = useAuth()
@@ -72,7 +73,10 @@ export default function LyricGeneratorPage() {
   ]
 
   const generateLyrics = async () => {
-    if (!prompt.trim()) return
+    if (!prompt.trim()) {
+      toast.error("Please enter a topic or prompt for your lyrics")
+      return
+    }
 
     setIsGenerating(true)
     try {
@@ -83,7 +87,7 @@ ${genre ? `Genre: ${genre}` : ""}
 ${mood ? `Mood: ${mood}` : ""}
 ${theme ? `Theme: ${theme}` : ""}
 
-Please create complete lyrics with verses, chorus, and bridge. Make them emotionally resonant and suitable for the specified genre and mood.`
+Please create complete lyrics with verses, chorus, and bridge. Make them emotionally resonant and suitable for the specified genre and mood. Format the lyrics clearly with section labels (Verse 1, Chorus, etc.).`
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -102,19 +106,29 @@ Please create complete lyrics with verses, chorus, and bridge. Make them emotion
 
       const data = await response.json()
       setGeneratedLyrics(data.content)
+      toast.success("Lyrics generated successfully!")
     } catch (error) {
       console.error("Error generating lyrics:", error)
-      setGeneratedLyrics("Sorry, there was an error generating lyrics. Please try again.")
+      toast.error("Sorry, there was an error generating lyrics. Please try again.")
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedLyrics)
+  const copyToClipboard = async () => {
+    if (!generatedLyrics) return
+
+    try {
+      await navigator.clipboard.writeText(generatedLyrics)
+      toast.success("Lyrics copied to clipboard!")
+    } catch (error) {
+      toast.error("Failed to copy lyrics")
+    }
   }
 
   const downloadLyrics = () => {
+    if (!generatedLyrics) return
+
     const element = document.createElement("a")
     const file = new Blob([generatedLyrics], { type: "text/plain" })
     element.href = URL.createObjectURL(file)
@@ -122,6 +136,7 @@ Please create complete lyrics with verses, chorus, and bridge. Make them emotion
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
+    toast.success("Lyrics downloaded!")
   }
 
   const examplePrompts = [

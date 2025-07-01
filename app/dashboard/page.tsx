@@ -1,423 +1,519 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useChat } from "ai/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { useAuth } from "@/components/auth-provider"
 import {
-  TrendingUp,
-  Users,
-  FileText,
-  DollarSign,
-  Calendar,
+  Bot,
   Music,
-  ArrowUpRight,
+  FileText,
+  Users,
+  Camera,
+  MessageSquare,
+  Wand2,
+  ArrowRight,
   Clock,
-  CheckCircle,
-  AlertCircle,
-  BarChart3,
+  Star,
+  Send,
+  Loader2,
+  Plus,
+  Mic,
+  Paperclip,
+  PenTool,
+  Share2,
 } from "lucide-react"
 import Link from "next/link"
+import { toast } from "sonner"
 
 export default function DashboardPage() {
-  const [timeRange, setTimeRange] = useState("7d")
+  const { user } = useAuth()
+  const [isExpanded, setIsExpanded] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const stats = [
-    {
-      title: "Total Revenue",
-      value: "$12,450",
-      change: "+12.5%",
-      trend: "up",
-      icon: DollarSign,
-      description: "From streaming and performances",
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages } = useChat({
+    api: "/api/chat",
+    body: {
+      assistantType: "armie",
     },
-    {
-      title: "Active Contracts",
-      value: "8",
-      change: "+2",
-      trend: "up",
-      icon: FileText,
-      description: "3 pending review",
+    onError: (error) => {
+      console.error("Chat error:", error)
+      toast.error("Failed to send message. Please try again.")
     },
-    {
-      title: "Monthly Listeners",
-      value: "24.8K",
-      change: "+18.2%",
-      trend: "up",
-      icon: Users,
-      description: "Across all platforms",
-    },
-    {
-      title: "Upcoming Events",
-      value: "5",
-      change: "+1",
-      trend: "up",
-      icon: Calendar,
-      description: "Next 30 days",
-    },
-  ]
+  })
+
+  useEffect(() => {
+    // Initialize with welcome message if no messages
+    if (messages.length === 0) {
+      const welcomeContent = `🎵 Welcome back, ${user?.name || "Artist"}! I'm ARMIE (Artist Resource Management & Innovation Engine) — your comprehensive AI-powered career development assistant.
+
+I'm here to help you build a sustainable, scalable music career with:
+
+**🚀 Artist Development & Strategy**
+• Personalized career roadmaps and goal setting
+• Business formation (LLC, EIN registration, bank accounts)
+• Intellectual property protection and copyright guidance
+
+**💰 Financial Management & Revenue**
+• Budget planning and expense tracking
+• Revenue forecasting and monetization strategies
+• Grant opportunities and crowdfunding guidance
+
+**📈 Distribution & Marketing**
+• DSP optimization and metadata management
+• Promotional campaign development
+• Social media and playlist strategies
+
+**🤝 Networking & Partnerships**
+• Industry relationship building
+• Event networking and collaboration opportunities
+• Strategic partnership development
+
+**⚡ Business Automation & Tech**
+• Workflow automation and SaaS integration
+• Blockchain and NFT guidance
+• Performance analytics and reporting
+
+What aspect of your music career would you like to focus on today? I'm here to provide actionable, data-driven insights to help you succeed! 🎯`
+
+      setMessages([
+        {
+          id: "welcome",
+          role: "assistant",
+          content: welcomeContent,
+          createdAt: new Date(),
+        },
+      ])
+    }
+  }, [user, setMessages])
+
+  useEffect(() => {
+    if (isExpanded) {
+      scrollToBottom()
+    }
+  }, [messages, isExpanded])
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
   const recentActivity = [
     {
       id: 1,
       type: "contract",
-      title: "Record Label Agreement",
-      description: "Contract review completed",
+      title: "Artist Management Agreement created",
       time: "2 hours ago",
-      status: "completed",
       icon: FileText,
+      color: "text-blue-600",
     },
     {
       id: 2,
-      type: "revenue",
-      title: "Streaming Payout",
-      description: "$450 from Spotify",
+      type: "cover-art",
+      title: "Album cover generated for 'Summer Vibes'",
+      time: "5 hours ago",
+      icon: Camera,
+      color: "text-pink-600",
+    },
+    {
+      id: 3,
+      type: "chat",
+      title: "ARMIE consultation about royalty splits",
       time: "1 day ago",
-      status: "received",
-      icon: DollarSign,
-    },
-    {
-      id: 3,
-      type: "event",
-      title: "Live Performance",
-      description: "The Blue Note - NYC",
-      time: "3 days ago",
-      status: "upcoming",
-      icon: Calendar,
+      icon: Bot,
+      color: "text-purple-600",
     },
     {
       id: 4,
-      type: "collaboration",
-      title: "Feature Request",
-      description: "From @producer_mike",
-      time: "5 days ago",
-      status: "pending",
+      type: "social",
+      title: "Social media posts scheduled",
+      time: "2 days ago",
       icon: Users,
+      color: "text-green-600",
     },
   ]
 
-  const quickActions = [
+  const featuredTools = [
     {
-      title: "Review Contract",
-      description: "Get AI analysis of your latest agreement",
-      href: "/dashboard/contracts",
-      icon: FileText,
-      color: "bg-blue-500",
+      id: "lyric-generator",
+      name: "Lyric Generator",
+      description: "AI-powered songwriting assistant",
+      icon: PenTool,
+      color: "from-purple-500 to-indigo-500",
+      href: "/dashboard/assistants/lyric-generator",
+      featured: true,
     },
     {
-      title: "Generate Content",
-      description: "Create social media posts or press releases",
-      href: "/dashboard/assistants",
-      icon: Music,
-      color: "bg-purple-500",
+      id: "contract-wizard",
+      name: "Contract Wizard",
+      description: "AI-powered contract creation and guidance",
+      icon: Wand2,
+      color: "from-blue-500 to-cyan-500",
+      href: "/dashboard/contracts/wizard",
+      featured: true,
     },
     {
-      title: "Track Analytics",
-      description: "Monitor your streaming and social metrics",
-      href: "/dashboard/analytics",
-      icon: BarChart3,
-      color: "bg-green-500",
+      id: "cover-art",
+      name: "Cover Art Generator",
+      description: "Create stunning album artwork",
+      icon: Camera,
+      color: "from-pink-500 to-rose-500",
+      href: "/dashboard/assistants/cover-art-generator",
+      featured: true,
     },
     {
-      title: "Find Collaborators",
-      description: "Connect with other artists and producers",
-      href: "/dashboard/directory",
-      icon: Users,
-      color: "bg-orange-500",
+      id: "social-media",
+      name: "Social Media Assistant",
+      description: "Optimize your social media presence",
+      icon: Share2,
+      color: "from-green-500 to-emerald-500",
+      href: "/dashboard/assistants/social-media-assistant",
+      featured: true,
     },
   ]
 
-  const upcomingTasks = [
-    {
-      id: 1,
-      title: "Submit master recordings",
-      description: "Due for Atlantic Records deal",
-      dueDate: "Tomorrow",
-      priority: "high",
-      completed: false,
-    },
-    {
-      id: 2,
-      title: "Review publishing agreement",
-      description: "Sony Music Publishing contract",
-      dueDate: "Dec 15",
-      priority: "medium",
-      completed: false,
-    },
-    {
-      id: 3,
-      title: "Update EPK materials",
-      description: "Add new press photos and bio",
-      dueDate: "Dec 20",
-      priority: "low",
-      completed: true,
-    },
-    {
-      id: 4,
-      title: "Plan social media campaign",
-      description: "For upcoming single release",
-      dueDate: "Dec 22",
-      priority: "medium",
-      completed: false,
-    },
-  ]
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's what's happening with your music career.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTimeRange("7d")}
-            className={timeRange === "7d" ? "bg-primary text-primary-foreground" : ""}
-          >
-            7 days
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTimeRange("30d")}
-            className={timeRange === "30d" ? "bg-primary text-primary-foreground" : ""}
-          >
-            30 days
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTimeRange("90d")}
-            className={timeRange === "90d" ? "bg-primary text-primary-foreground" : ""}
-          >
-            90 days
-          </Button>
+    <div className="space-y-8">
+      {/* Welcome Header */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Welcome back, {user?.name || "Artist"}! 👋</h1>
+            <p className="text-muted-foreground">Let's continue building your music career together</p>
+          </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                <span className={`flex items-center ${stat.trend === "up" ? "text-green-600" : "text-red-600"}`}>
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  {stat.change}
-                </span>
-                <span>from last period</span>
+      {/* ARMIE Chat Assistant */}
+      <Card className="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-purple-950/20 dark:via-blue-950/20 dark:to-indigo-950/20 border-purple-200 dark:border-purple-800">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Bot className="w-8 h-8 text-white" />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks to help manage your music career</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {quickActions.map((action, index) => (
-                <Link key={index} href={action.href}>
-                  <div className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer group">
-                    <div className="flex items-start space-x-3">
+              <div>
+                <CardTitle className="text-2xl font-bold text-purple-900 dark:text-purple-100 mb-1">
+                  Chat with ARMIE
+                </CardTitle>
+                <CardDescription className="text-purple-700 dark:text-purple-300">
+                  Your comprehensive AI music career development assistant - from strategy to execution
+                </CardDescription>
+                <div className="flex items-center space-x-4 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-purple-600 dark:text-purple-400">Online Now</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    <span className="text-sm text-purple-600 dark:text-purple-400">Expert Level</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="bg-white/50 hover:bg-white/70"
+              >
+                {isExpanded ? "Minimize" : "Expand"}
+              </Button>
+              <Link href="/dashboard/assistants/armie-chat">
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Full Chat
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Chat Messages */}
+          <div className={`transition-all duration-300 ${isExpanded ? "h-96" : "h-48"}`}>
+            <ScrollArea className="h-full pr-4">
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex items-start space-x-3 ${
+                      message.role === "user" ? "flex-row-reverse space-x-reverse" : ""
+                    }`}
+                  >
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      {message.role === "user" ? (
+                        <>
+                          <AvatarImage src={user?.avatar || "/placeholder-user.jpg"} />
+                          <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm">
+                            {user?.name
+                              ?.split(" ")
+                              .map((n: string) => n[0])
+                              .join("")
+                              .toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </>
+                      ) : (
+                        <AvatarFallback className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
+                          <Bot className="w-4 h-4" />
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className={`flex-1 max-w-[85%] ${message.role === "user" ? "text-right" : ""}`}>
                       <div
-                        className={`p-2 rounded-lg ${action.color} text-white group-hover:scale-110 transition-transform`}
+                        className={`rounded-2xl px-4 py-3 shadow-sm ${
+                          message.role === "user"
+                            ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white ml-auto"
+                            : "bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-white/20"
+                        }`}
                       >
-                        <action.icon className="h-4 w-4" />
+                        <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium group-hover:text-primary transition-colors">{action.title}</h3>
-                        <p className="text-sm text-muted-foreground">{action.description}</p>
+                      <div className="text-xs text-purple-600/70 dark:text-purple-400/70 mt-1 px-1">
+                        {message.createdAt ? formatTime(message.createdAt) : formatTime(new Date())}
                       </div>
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Tasks */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Tasks</CardTitle>
-            <CardDescription>Important deadlines and reminders</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {upcomingTasks.map((task) => (
-              <div key={task.id} className="flex items-start space-x-3">
-                <div className="mt-1">
-                  {task.completed ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <div
-                      className={`h-4 w-4 rounded-full border-2 ${
-                        task.priority === "high"
-                          ? "border-red-500"
-                          : task.priority === "medium"
-                            ? "border-yellow-500"
-                            : "border-gray-300"
-                      }`}
-                    />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                    {task.title}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">{task.description}</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{task.dueDate}</span>
-                    <Badge
-                      variant={
-                        task.priority === "high" ? "destructive" : task.priority === "medium" ? "default" : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {task.priority}
-                    </Badge>
+                ))}
+                {isLoading && (
+                  <div className="flex items-start space-x-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
+                        <Bot className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3">
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                        <span className="text-sm text-purple-600 dark:text-purple-400">ARMIE is thinking...</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Your latest music business activities</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentActivity.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-center space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="p-2 bg-muted rounded-lg">
-                  <activity.icon className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium">{activity.title}</h4>
-                  <p className="text-sm text-muted-foreground">{activity.description}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge
-                    variant={
-                      activity.status === "completed"
-                        ? "default"
-                        : activity.status === "received"
-                          ? "default"
-                          : activity.status === "upcoming"
-                            ? "secondary"
-                            : "outline"
-                    }
-                  >
-                    {activity.status}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{activity.time}</span>
-                </div>
-              </div>
-            ))}
+            </ScrollArea>
           </div>
+
+          {/* Chat Input */}
+          <form onSubmit={handleSubmit} className="space-y-2">
+            <div className="flex items-center space-x-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-white/20 p-2">
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white/50" disabled>
+                <Paperclip className="w-4 h-4 text-purple-600" />
+              </Button>
+              <Input
+                value={input}
+                onChange={handleInputChange}
+                placeholder="Ask ARMIE about your music career strategy, contracts, marketing, or business development..."
+                disabled={isLoading}
+                className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-purple-600/50"
+              />
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white/50" disabled>
+                <Mic className="w-4 h-4 text-purple-600" />
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                size="sm"
+                className="h-8 w-8 p-0 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </Button>
+            </div>
+            {error && <p className="text-sm text-red-500 px-2">Error: {error.message}</p>}
+            <div className="flex items-center justify-between px-2">
+              <p className="text-xs text-purple-600/70 dark:text-purple-400/70">
+                ARMIE is your comprehensive music career development assistant with industry expertise
+              </p>
+              <div className="flex items-center space-x-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs text-purple-600/70 hover:text-purple-600"
+                  onClick={() => {
+                    setMessages([])
+                    setMessages([
+                      {
+                        id: "welcome-new",
+                        role: "assistant",
+                        content: `🎵 Hi ${user?.name || "there"}! I'm ARMIE, your AI music career development assistant. What would you like to work on today?`,
+                        createdAt: new Date(),
+                      },
+                    ])
+                  }}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  New Chat
+                </Button>
+              </div>
+            </div>
+          </form>
         </CardContent>
       </Card>
 
-      {/* Career Progress */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Career Progress</CardTitle>
-            <CardDescription>Track your growth as an independent artist</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Contract Management</span>
-                <span>85%</span>
-              </div>
-              <Progress value={85} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Marketing & Promotion</span>
-                <span>72%</span>
-              </div>
-              <Progress value={72} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Revenue Diversification</span>
-                <span>58%</span>
-              </div>
-              <Progress value={58} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Industry Networking</span>
-                <span>43%</span>
-              </div>
-              <Progress value={43} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Featured Tools */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Featured Tools</h2>
+            <Link href="/dashboard/assistants">
+              <Button variant="outline" size="sm">
+                View All
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Goals</CardTitle>
-            <CardDescription>December 2024 objectives</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Release new single</p>
-                <p className="text-xs text-muted-foreground">Completed Dec 1st</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {featuredTools.map((tool) => {
+              const IconComponent = tool.icon
+              return (
+                <Link key={tool.id} href={tool.href}>
+                  <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-105 cursor-pointer">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`w-12 h-12 rounded-xl bg-gradient-to-r ${tool.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+                        >
+                          <IconComponent className="w-6 h-6 text-white" />
+                        </div>
+                        {tool.featured && (
+                          <Badge className="bg-yellow-100 text-yellow-800">
+                            <Star className="w-3 h-3 mr-1" />
+                            Featured
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-lg group-hover:text-purple-600 transition-colors">
+                        {tool.name}
+                      </CardTitle>
+                      <CardDescription className="text-sm">{tool.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Click to open</span>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-purple-600 group-hover:translate-x-1 transition-all duration-300" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common tasks to get you started</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Link href="/dashboard/contracts/wizard">
+                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Create New Contract
+                  </Button>
+                </Link>
+                <Link href="/dashboard/assistants/cover-art-generator">
+                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                    <Camera className="w-4 h-4 mr-2" />
+                    Generate Cover Art
+                  </Button>
+                </Link>
+                <Link href="/dashboard/assistants/lyric-generator">
+                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                    <Music className="w-4 h-4 mr-2" />
+                    Write Song Lyrics
+                  </Button>
+                </Link>
+                <Link href="/dashboard/assistants/social-media-assistant">
+                  <Button variant="outline" className="w-full justify-start bg-transparent">
+                    <Users className="w-4 h-4 mr-2" />
+                    Plan Social Media
+                  </Button>
+                </Link>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Secure 3 new gigs</p>
-                <p className="text-xs text-muted-foreground">Completed Dec 8th</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Clock className="w-5 h-5" />
+                <span>Recent Activity</span>
+              </CardTitle>
+              <CardDescription>Your latest interactions with ARMIE</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {recentActivity.map((activity) => {
+                const IconComponent = activity.icon
+                return (
+                  <div key={activity.id} className="flex items-start space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <IconComponent className={`w-4 h-4 ${activity.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Performance Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageSquare className="w-5 h-5" />
+                <span>This Week</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">AI Consultations</span>
+                  <span className="text-sm font-medium">12</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: "75%" }}></div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Reach 25K monthly listeners</p>
-                <p className="text-xs text-muted-foreground">24.8K / 25K (99%)</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Content Created</span>
+                  <span className="text-sm font-medium">8</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: "60%" }}></div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="h-5 w-5 rounded-full border-2 border-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Complete publishing deal</p>
-                <p className="text-xs text-muted-foreground">In negotiation</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Contracts Reviewed</span>
+                  <span className="text-sm font-medium">3</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-600 h-2 rounded-full" style={{ width: "40%" }}></div>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
