@@ -53,14 +53,6 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Armie Brand Colors
-        "armie-primary": "hsl(var(--armie-primary))",
-        "armie-secondary": "hsl(var(--armie-secondary))",
-        "armie-accent": "hsl(var(--armie-accent))",
-        // Specific brand color values
-        "slate-dark": "#2E2E3A",
-        "mint-teal": "#8AE3D2",
-        "off-white": "#FAFAFA",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -70,6 +62,11 @@ const config: Config = {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        armie: {
+          primary: "#6366f1",
+          secondary: "#f1f5f9",
+          accent: "#ffffff",
         },
       },
       borderRadius: {
@@ -86,15 +83,10 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "caret-blink": {
-          "0%,70%,100%": { opacity: "1" },
-          "20%,50%": { opacity: "0" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "caret-blink": "caret-blink 1.25s ease-out infinite",
       },
     },
   },

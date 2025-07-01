@@ -1,390 +1,423 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import {
-  Bot,
-  Sparkles,
-  FileText,
-  Palette,
-  Share2,
-  PenTool,
-  Mail,
-  Users,
-  Radio,
-  Award,
-  Building,
-  Calculator,
-  Shield,
-  Globe,
-  MessageSquare,
-  DollarSign,
   TrendingUp,
-  Target,
+  Users,
+  FileText,
+  DollarSign,
   Calendar,
-  Plus,
-  Search,
+  Music,
+  ArrowUpRight,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  BarChart3,
 } from "lucide-react"
 import Link from "next/link"
-import { Input } from "@/components/ui/input"
 
-export default function Dashboard() {
-  // All AI Assistants/Agents
-  const aiAgents = [
+export default function DashboardPage() {
+  const [timeRange, setTimeRange] = useState("7d")
+
+  const stats = [
     {
-      name: "General Assistant",
-      description: "Strategic planning & daily guidance",
-      icon: Sparkles,
-      color: "from-purple-500 to-purple-600",
-      textColor: "text-purple-400",
-      bgColor: "bg-purple-950/20",
-      usage: "High",
-      href: "/ai-assistant",
-    },
-    {
-      name: "Contract Assistant",
-      description: "Legal agreements & contracts",
-      icon: FileText,
-      color: "from-blue-500 to-blue-600",
-      textColor: "text-blue-400",
-      bgColor: "bg-blue-950/20",
-      usage: "Medium",
-      href: "/tools/contract-assistant",
-    },
-    {
-      name: "Cover Art Generator",
-      description: "Professional album artwork",
-      icon: Palette,
-      color: "from-pink-500 to-pink-600",
-      textColor: "text-pink-400",
-      bgColor: "bg-pink-950/20",
-      usage: "High",
-      href: "/tools/cover-art-generator",
-    },
-    {
-      name: "Social Media Assistant",
-      description: "Content creation & scheduling",
-      icon: Share2,
-      color: "from-green-500 to-green-600",
-      textColor: "text-green-400",
-      bgColor: "bg-green-950/20",
-      usage: "Daily",
-      href: "/tools/social-media-assistant",
-    },
-    {
-      name: "Lyric Generator",
-      description: "AI-powered songwriting",
-      icon: PenTool,
-      color: "from-yellow-500 to-yellow-600",
-      textColor: "text-yellow-400",
-      bgColor: "bg-yellow-950/20",
-      usage: "Medium",
-      href: "/tools/lyric-generator",
-    },
-    {
-      name: "Email Generator",
-      description: "Professional outreach",
-      icon: Mail,
-      color: "from-cyan-500 to-cyan-600",
-      textColor: "text-cyan-400",
-      bgColor: "bg-cyan-950/20",
-      usage: "Weekly",
-      href: "/tools/email-generator",
-    },
-    {
-      name: "Bio Generator",
-      description: "Professional artist bios",
-      icon: Users,
-      color: "from-indigo-500 to-indigo-600",
-      textColor: "text-indigo-400",
-      bgColor: "bg-indigo-950/20",
-      usage: "Low",
-      href: "/tools/artist-bio-generator",
-    },
-    {
-      name: "EPK Assistant",
-      description: "Electronic press kits",
-      icon: FileText,
-      color: "from-teal-500 to-teal-600",
-      textColor: "text-teal-400",
-      bgColor: "bg-teal-950/20",
-      usage: "Medium",
-      href: "/tools/epk-assistant",
-    },
-    {
-      name: "Press Release",
-      description: "Professional press releases",
-      icon: Radio,
-      color: "from-rose-500 to-rose-600",
-      textColor: "text-rose-400",
-      bgColor: "bg-rose-950/20",
-      usage: "Low",
-      href: "/tools/press-release-generator",
-    },
-    {
-      name: "Branding Assistant",
-      description: "Brand identity development",
-      icon: Award,
-      color: "from-amber-500 to-amber-600",
-      textColor: "text-amber-400",
-      bgColor: "bg-amber-950/20",
-      usage: "Medium",
-      href: "/tools/branding-assistant",
-    },
-    {
-      name: "EIN Manager",
-      description: "Business setup & taxes",
-      icon: Building,
-      color: "from-slate-500 to-slate-600",
-      textColor: "text-slate-400",
-      bgColor: "bg-slate-950/20",
-      usage: "Low",
-      href: "/tools/ein-manager",
-    },
-    {
-      name: "Tax Manager",
-      description: "Tax guidance & tracking",
-      icon: Calculator,
-      color: "from-emerald-500 to-emerald-600",
-      textColor: "text-emerald-400",
-      bgColor: "bg-emerald-950/20",
-      usage: "Monthly",
-      href: "/tools/tax-manager",
-    },
-    {
-      name: "P.R.O. Manager",
-      description: "Performance rights org",
-      icon: Shield,
-      color: "from-orange-500 to-orange-600",
-      textColor: "text-orange-400",
-      bgColor: "bg-orange-950/20",
-      usage: "Medium",
-      href: "/tools/pro-manager",
-    },
-    {
-      name: "Licensing Assistant",
-      description: "Music licensing & sync",
-      icon: Globe,
-      color: "from-violet-500 to-violet-600",
-      textColor: "text-violet-400",
-      bgColor: "bg-violet-950/20",
-      usage: "Medium",
-      href: "/tools/licensing-assistant",
-    },
-    {
-      name: "DM Generator",
-      description: "Direct message scripts",
-      icon: MessageSquare,
-      color: "from-lime-500 to-lime-600",
-      textColor: "text-lime-400",
-      bgColor: "bg-lime-950/20",
-      usage: "Weekly",
-      href: "/tools/dm-generator",
-    },
-    {
-      name: "Grant Finder",
-      description: "Funding opportunities",
+      title: "Total Revenue",
+      value: "$12,450",
+      change: "+12.5%",
+      trend: "up",
       icon: DollarSign,
-      color: "from-sky-500 to-sky-600",
-      textColor: "text-sky-400",
-      bgColor: "bg-sky-950/20",
-      usage: "Monthly",
-      href: "/tools/grant-finder",
+      description: "From streaming and performances",
     },
     {
-      name: "Revenue Generator",
-      description: "Monetization strategies",
-      icon: TrendingUp,
-      color: "from-fuchsia-500 to-fuchsia-600",
-      textColor: "text-fuchsia-400",
-      bgColor: "bg-fuchsia-950/20",
-      usage: "Low",
-      href: "/tools/revenue-stream-generator",
+      title: "Active Contracts",
+      value: "8",
+      change: "+2",
+      trend: "up",
+      icon: FileText,
+      description: "3 pending review",
     },
     {
-      name: "Task Generator",
-      description: "Goal-to-task conversion",
-      icon: Target,
-      color: "from-red-500 to-red-600",
-      textColor: "text-red-400",
-      bgColor: "bg-red-950/20",
-      usage: "High",
-      href: "/tools/task-generator",
+      title: "Monthly Listeners",
+      value: "24.8K",
+      change: "+18.2%",
+      trend: "up",
+      icon: Users,
+      description: "Across all platforms",
     },
     {
-      name: "Calendar Assistant",
-      description: "Smart scheduling",
+      title: "Upcoming Events",
+      value: "5",
+      change: "+1",
+      trend: "up",
       icon: Calendar,
-      color: "from-neutral-500 to-neutral-600",
-      textColor: "text-neutral-400",
-      bgColor: "bg-neutral-950/20",
-      usage: "Daily",
-      href: "/tools/calendar-assistant",
+      description: "Next 30 days",
     },
   ]
 
-  const getUsageBadgeColor = (usage: string) => {
-    switch (usage) {
-      case "Daily":
-        return "bg-armie-secondary text-armie-primary"
-      case "High":
-        return "bg-emerald-500 text-white"
-      case "Medium":
-        return "bg-yellow-500 text-white"
-      case "Weekly":
-        return "bg-blue-500 text-white"
-      case "Monthly":
-        return "bg-purple-500 text-white"
-      case "Low":
-        return "bg-gray-500 text-white"
-      default:
-        return "bg-gray-500 text-white"
-    }
-  }
+  const recentActivity = [
+    {
+      id: 1,
+      type: "contract",
+      title: "Record Label Agreement",
+      description: "Contract review completed",
+      time: "2 hours ago",
+      status: "completed",
+      icon: FileText,
+    },
+    {
+      id: 2,
+      type: "revenue",
+      title: "Streaming Payout",
+      description: "$450 from Spotify",
+      time: "1 day ago",
+      status: "received",
+      icon: DollarSign,
+    },
+    {
+      id: 3,
+      type: "event",
+      title: "Live Performance",
+      description: "The Blue Note - NYC",
+      time: "3 days ago",
+      status: "upcoming",
+      icon: Calendar,
+    },
+    {
+      id: 4,
+      type: "collaboration",
+      title: "Feature Request",
+      description: "From @producer_mike",
+      time: "5 days ago",
+      status: "pending",
+      icon: Users,
+    },
+  ]
+
+  const quickActions = [
+    {
+      title: "Review Contract",
+      description: "Get AI analysis of your latest agreement",
+      href: "/dashboard/contracts",
+      icon: FileText,
+      color: "bg-blue-500",
+    },
+    {
+      title: "Generate Content",
+      description: "Create social media posts or press releases",
+      href: "/dashboard/assistants",
+      icon: Music,
+      color: "bg-purple-500",
+    },
+    {
+      title: "Track Analytics",
+      description: "Monitor your streaming and social metrics",
+      href: "/dashboard/analytics",
+      icon: BarChart3,
+      color: "bg-green-500",
+    },
+    {
+      title: "Find Collaborators",
+      description: "Connect with other artists and producers",
+      href: "/dashboard/directory",
+      icon: Users,
+      color: "bg-orange-500",
+    },
+  ]
+
+  const upcomingTasks = [
+    {
+      id: 1,
+      title: "Submit master recordings",
+      description: "Due for Atlantic Records deal",
+      dueDate: "Tomorrow",
+      priority: "high",
+      completed: false,
+    },
+    {
+      id: 2,
+      title: "Review publishing agreement",
+      description: "Sony Music Publishing contract",
+      dueDate: "Dec 15",
+      priority: "medium",
+      completed: false,
+    },
+    {
+      id: 3,
+      title: "Update EPK materials",
+      description: "Add new press photos and bio",
+      dueDate: "Dec 20",
+      priority: "low",
+      completed: true,
+    },
+    {
+      id: 4,
+      title: "Plan social media campaign",
+      description: "For upcoming single release",
+      dueDate: "Dec 22",
+      priority: "medium",
+      completed: false,
+    },
+  ]
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <div className="flex items-center gap-2 flex-1">
-          <Bot className="w-6 h-6 text-armie-secondary" />
-          <h1 className="text-xl font-bold bg-gradient-to-r from-armie-secondary to-purple-400 bg-clip-text text-transparent">
-            AI Agent Dashboard
-          </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back! Here's what's happening with your music career.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input placeholder="Search assistants..." className="pl-8 w-64" />
-          </div>
-          <Button size="sm" className="bg-armie-primary hover:bg-armie-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            New Chat
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimeRange("7d")}
+            className={timeRange === "7d" ? "bg-primary text-primary-foreground" : ""}
+          >
+            7 days
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimeRange("30d")}
+            className={timeRange === "30d" ? "bg-primary text-primary-foreground" : ""}
+          >
+            30 days
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimeRange("90d")}
+            className={timeRange === "90d" ? "bg-primary text-primary-foreground" : ""}
+          >
+            90 days
           </Button>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-6 bg-gradient-to-br from-background via-background to-armie-primary/5">
-        {/* Stats Overview */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-gradient-to-r from-armie-secondary/10 to-armie-primary/10 border-armie-secondary/20">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Assistants</p>
-                    <p className="text-2xl font-bold text-armie-primary">{aiAgents.length}</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <Card key={index} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+              <stat.icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                <span className={`flex items-center ${stat.trend === "up" ? "text-green-600" : "text-red-600"}`}>
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  {stat.change}
+                </span>
+                <span>from last period</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks to help manage your music career</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {quickActions.map((action, index) => (
+                <Link key={index} href={action.href}>
+                  <div className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-start space-x-3">
+                      <div
+                        className={`p-2 rounded-lg ${action.color} text-white group-hover:scale-110 transition-transform`}
+                      >
+                        <action.icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium group-hover:text-primary transition-colors">{action.title}</h3>
+                        <p className="text-sm text-muted-foreground">{action.description}</p>
+                      </div>
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
                   </div>
-                  <Bot className="h-8 w-8 text-armie-secondary" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border-emerald-500/20">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Active Today</p>
-                    <p className="text-2xl font-bold text-emerald-600">12</p>
-                  </div>
-                  <Sparkles className="h-8 w-8 text-emerald-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-blue-500/20">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Messages Today</p>
-                    <p className="text-2xl font-bold text-blue-600">247</p>
-                  </div>
-                  <MessageSquare className="h-8 w-8 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 border-purple-500/20">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Tasks Created</p>
-                    <p className="text-2xl font-bold text-purple-600">34</p>
-                  </div>
-                  <Target className="h-8 w-8 text-purple-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="text-lg text-muted-foreground">
-                Your complete suite of specialized AI assistants for music career management
-              </p>
+                </Link>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-armie-secondary/20 text-armie-secondary border-armie-secondary/30 px-3 py-1">
-                All Systems Online
-              </Badge>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* AI Agents Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-          {aiAgents.map((agent, index) => (
-            <Link key={index} href={agent.href} className="group">
-              <Card className="relative aspect-square border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-card/80 backdrop-blur-sm overflow-hidden">
-                {/* Background Gradient */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${agent.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
-                />
-
-                {/* Usage Badge */}
-                <div className="absolute top-3 right-3 z-10">
-                  <Badge className={`text-xs px-2 py-1 ${getUsageBadgeColor(agent.usage)} shadow-sm`}>
-                    {agent.usage}
-                  </Badge>
+        {/* Upcoming Tasks */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Tasks</CardTitle>
+            <CardDescription>Important deadlines and reminders</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {upcomingTasks.map((task) => (
+              <div key={task.id} className="flex items-start space-x-3">
+                <div className="mt-1">
+                  {task.completed ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <div
+                      className={`h-4 w-4 rounded-full border-2 ${
+                        task.priority === "high"
+                          ? "border-red-500"
+                          : task.priority === "medium"
+                            ? "border-yellow-500"
+                            : "border-gray-300"
+                      }`}
+                    />
+                  )}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
+                    {task.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">{task.description}</p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Clock className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{task.dueDate}</span>
+                    <Badge
+                      variant={
+                        task.priority === "high" ? "destructive" : task.priority === "medium" ? "default" : "secondary"
+                      }
+                      className="text-xs"
+                    >
+                      {task.priority}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
 
-                <CardContent className="p-4 h-full flex flex-col items-center justify-center text-center relative z-10">
-                  {/* Icon */}
-                  <div
-                    className={`w-12 h-12 rounded-xl ${agent.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-sm`}
+      {/* Recent Activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>Your latest music business activities</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentActivity.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-center space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="p-2 bg-muted rounded-lg">
+                  <activity.icon className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-medium">{activity.title}</h4>
+                  <p className="text-sm text-muted-foreground">{activity.description}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge
+                    variant={
+                      activity.status === "completed"
+                        ? "default"
+                        : activity.status === "received"
+                          ? "default"
+                          : activity.status === "upcoming"
+                            ? "secondary"
+                            : "outline"
+                    }
                   >
-                    <agent.icon className={`w-6 h-6 ${agent.textColor}`} />
-                  </div>
+                    {activity.status}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">{activity.time}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-                  {/* Content */}
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-xs text-foreground group-hover:text-armie-secondary transition-colors duration-300 leading-tight">
-                      {agent.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{agent.description}</p>
-                  </div>
+      {/* Career Progress */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Career Progress</CardTitle>
+            <CardDescription>Track your growth as an independent artist</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Contract Management</span>
+                <span>85%</span>
+              </div>
+              <Progress value={85} className="h-2" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Marketing & Promotion</span>
+                <span>72%</span>
+              </div>
+              <Progress value={72} className="h-2" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Revenue Diversification</span>
+                <span>58%</span>
+              </div>
+              <Progress value={58} className="h-2" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Industry Networking</span>
+                <span>43%</span>
+              </div>
+              <Progress value={43} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
 
-                  {/* Hover Effect Indicator */}
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-armie-secondary rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground">
-            Powered by <span className="font-semibold text-armie-secondary">Armie AI</span> • Your intelligent music
-            career companion
-          </p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Goals</CardTitle>
+            <CardDescription>December 2024 objectives</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Release new single</p>
+                <p className="text-xs text-muted-foreground">Completed Dec 1st</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Secure 3 new gigs</p>
+                <p className="text-xs text-muted-foreground">Completed Dec 8th</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Reach 25K monthly listeners</p>
+                <p className="text-xs text-muted-foreground">24.8K / 25K (99%)</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="h-5 w-5 rounded-full border-2 border-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Complete publishing deal</p>
+                <p className="text-xs text-muted-foreground">In negotiation</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

@@ -31,20 +31,20 @@ import Link from "next/link"
 
 export default function HomePage() {
   const router = useRouter()
-  const { user, isAuthenticated, loading } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
 
   useEffect(() => {
-    if (!loading) {
+    if (!isLoading) {
       if (isAuthenticated) {
-        router.push("/dashboard")
+        router.replace("/dashboard")
       } else {
-        router.push("/landing")
+        router.replace("/landing")
       }
     }
-  }, [isAuthenticated, loading, router])
+  }, [isAuthenticated, isLoading, router])
 
   // Show loading while checking auth
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center space-x-2">

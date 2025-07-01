@@ -1,444 +1,515 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useAuth } from "@/components/auth-provider"
 import {
   Plus,
-  Search,
-  Filter,
-  Calendar,
-  Clock,
-  AlertCircle,
-  CheckCircle,
   Target,
-  Flag,
-  User,
-  Tag,
-  MoreHorizontal,
+  Calendar,
+  Star,
+  TrendingUp,
+  Music,
+  Users,
+  DollarSign,
+  Zap,
+  MoreVertical,
   Edit,
   Trash2,
+  Crown,
 } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+
+interface Task {
+  id: string
+  title: string
+  description: string
+  category: "creative" | "business" | "marketing" | "networking" | "learning"
+  priority: "low" | "medium" | "high"
+  status: "todo" | "in-progress" | "completed"
+  dueDate?: Date
+  createdDate: Date
+  aiGenerated: boolean
+}
 
 export default function TasksPage() {
-  const [showAddTask, setShowAddTask] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedFilter, setSelectedFilter] = useState("all")
-
-  const tasks = [
+  const { user } = useAuth()
+  const [tasks, setTasks] = useState<Task[]>([
     {
-      id: 1,
-      title: "Finish mixing new single 'Midnight Dreams'",
-      description: "Complete final mix and master for upcoming release",
+      id: "1",
+      title: "Finish recording vocals for 'Summer Dreams'",
+      description: "Complete the lead vocals and harmonies for the chorus and bridge sections",
+      category: "creative",
       priority: "high",
       status: "in-progress",
-      dueDate: "2024-12-28",
-      category: "production",
-      tags: ["mixing", "single", "urgent"],
-      assignee: "Alex Rodriguez",
-      progress: 75,
+      dueDate: new Date("2024-02-15"),
+      createdDate: new Date("2024-01-10"),
+      aiGenerated: true,
     },
     {
-      id: 2,
-      title: "Create social media content calendar",
-      description: "Plan posts for January album promotion",
-      priority: "medium",
-      status: "todo",
-      dueDate: "2024-12-30",
+      id: "2",
+      title: "Submit music to 5 Spotify playlists",
+      description: "Research and submit latest single to relevant independent playlists",
       category: "marketing",
-      tags: ["social-media", "planning"],
-      assignee: "Alex Rodriguez",
-      progress: 0,
-    },
-    {
-      id: 3,
-      title: "Review record label contract",
-      description: "Legal review of new recording agreement terms",
-      priority: "high",
-      status: "in-progress",
-      dueDate: "2024-12-29",
-      category: "business",
-      tags: ["legal", "contract", "important"],
-      assignee: "Alex Rodriguez",
-      progress: 40,
-    },
-    {
-      id: 4,
-      title: "Book studio time for February",
-      description: "Reserve recording studio for album sessions",
       priority: "medium",
       status: "todo",
-      dueDate: "2025-01-05",
-      category: "production",
-      tags: ["studio", "booking"],
-      assignee: "Alex Rodriguez",
-      progress: 0,
+      dueDate: new Date("2024-02-20"),
+      createdDate: new Date("2024-01-12"),
+      aiGenerated: true,
     },
     {
-      id: 5,
-      title: "Design album artwork concepts",
-      description: "Create initial concepts for album cover design",
+      id: "3",
+      title: "Update social media bio across platforms",
+      description: "Refresh bio with latest achievements and upcoming releases",
+      category: "marketing",
       priority: "low",
       status: "completed",
-      dueDate: "2024-12-25",
-      category: "creative",
-      tags: ["design", "artwork", "album"],
-      assignee: "Alex Rodriguez",
-      progress: 100,
+      createdDate: new Date("2024-01-08"),
+      aiGenerated: false,
     },
-  ]
+    {
+      id: "4",
+      title: "Network with local venue owners",
+      description: "Reach out to 3 local venues for potential booking opportunities",
+      category: "networking",
+      priority: "medium",
+      status: "todo",
+      dueDate: new Date("2024-02-25"),
+      createdDate: new Date("2024-01-14"),
+      aiGenerated: true,
+    },
+  ])
 
-  const goals = [
-    {
-      id: 1,
-      title: "Complete Album Recording",
-      description: "Finish recording all 12 tracks for debut album",
-      progress: 60,
-      deadline: "2025-03-01",
-      status: "in-progress",
-      tasks: 8,
-      completedTasks: 5,
-    },
-    {
-      id: 2,
-      title: "Build Social Media Presence",
-      description: "Reach 10K followers across all platforms",
-      progress: 35,
-      deadline: "2025-02-15",
-      status: "in-progress",
-      tasks: 12,
-      completedTasks: 4,
-    },
-    {
-      id: 3,
-      title: "Secure Live Performance Bookings",
-      description: "Book 15 live shows for 2025 tour",
-      progress: 20,
-      deadline: "2025-04-01",
-      status: "in-progress",
-      tasks: 6,
-      completedTasks: 1,
-    },
-  ]
+  const [filter, setFilter] = useState("all")
+  const [sortBy, setSortBy] = useState("dueDate")
+  const [isAddingTask, setIsAddingTask] = useState(false)
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    category: "creative" as Task["category"],
+    priority: "medium" as Task["priority"],
+    dueDate: "",
+  })
+
+  const isPremiumUser = user?.plan === "pro" || user?.plan === "enterprise"
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "creative":
+        return Music
+      case "business":
+        return DollarSign
+      case "marketing":
+        return TrendingUp
+      case "networking":
+        return Users
+      case "learning":
+        return Star
+      default:
+        return Target
+    }
+  }
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "creative":
+        return "bg-purple-100 text-purple-700"
+      case "business":
+        return "bg-green-100 text-green-700"
+      case "marketing":
+        return "bg-blue-100 text-blue-700"
+      case "networking":
+        return "bg-orange-100 text-orange-700"
+      case "learning":
+        return "bg-pink-100 text-pink-700"
+      default:
+        return "bg-gray-100 text-gray-700"
+    }
+  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-700"
       case "medium":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-700"
       case "low":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-700"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-700"
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800"
-      case "in-progress":
-        return "bg-blue-100 text-blue-800"
-      case "todo":
-        return "bg-gray-100 text-gray-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
+  const filteredTasks = tasks
+    .filter((task) => {
+      if (filter === "all") return true
+      if (filter === "completed") return task.status === "completed"
+      if (filter === "pending") return task.status !== "completed"
+      if (filter === "ai-generated") return task.aiGenerated
+      return task.category === filter
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "priority":
+          const priorityOrder = { high: 3, medium: 2, low: 1 }
+          return priorityOrder[b.priority] - priorityOrder[a.priority]
+        case "category":
+          return a.category.localeCompare(b.category)
+        case "status":
+          return a.status.localeCompare(b.status)
+        default:
+          if (!a.dueDate && !b.dueDate) return 0
+          if (!a.dueDate) return 1
+          if (!b.dueDate) return -1
+          return a.dueDate.getTime() - b.dueDate.getTime()
+      }
+    })
+
+  const completedTasks = tasks.filter((task) => task.status === "completed").length
+  const totalTasks = tasks.length
+  const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
+
+  const toggleTaskStatus = (taskId: string) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              status: task.status === "completed" ? "todo" : "completed",
+            }
+          : task,
+      ),
+    )
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "production":
-        return <Target className="h-4 w-4" />
-      case "marketing":
-        return <Flag className="h-4 w-4" />
-      case "business":
-        return <User className="h-4 w-4" />
-      case "creative":
-        return <Tag className="h-4 w-4" />
-      default:
-        return <Target className="h-4 w-4" />
+  const addTask = () => {
+    if (!newTask.title.trim()) return
+
+    const task: Task = {
+      id: Date.now().toString(),
+      title: newTask.title,
+      description: newTask.description,
+      category: newTask.category,
+      priority: newTask.priority,
+      status: "todo",
+      dueDate: newTask.dueDate ? new Date(newTask.dueDate) : undefined,
+      createdDate: new Date(),
+      aiGenerated: false,
     }
+
+    setTasks((prev) => [task, ...prev])
+    setNewTask({
+      title: "",
+      description: "",
+      category: "creative",
+      priority: "medium",
+      dueDate: "",
+    })
+    setIsAddingTask(false)
   }
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter =
-      selectedFilter === "all" ||
-      task.status === selectedFilter ||
-      task.priority === selectedFilter ||
-      task.category === selectedFilter
-    return matchesSearch && matchesFilter
-  })
+  const deleteTask = (taskId: string) => {
+    setTasks((prev) => prev.filter((task) => task.id !== taskId))
+  }
+
+  const generateAITasks = () => {
+    // Simulate AI task generation
+    const aiTasks: Task[] = [
+      {
+        id: Date.now().toString() + "1",
+        title: "Create Instagram Reels for new single",
+        description: "Develop 3-5 short-form video content pieces to promote your latest release",
+        category: "marketing",
+        priority: "high",
+        status: "todo",
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+        createdDate: new Date(),
+        aiGenerated: true,
+      },
+      {
+        id: Date.now().toString() + "2",
+        title: "Research sync licensing opportunities",
+        description: "Identify 5 music supervisors or sync agencies that match your genre",
+        category: "business",
+        priority: "medium",
+        status: "todo",
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks from now
+        createdDate: new Date(),
+        aiGenerated: true,
+      },
+    ]
+
+    setTasks((prev) => [...aiTasks, ...prev])
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Task Manager</h1>
-          <p className="text-muted-foreground">Organize and track your music career tasks and goals</p>
+          <p className="text-muted-foreground">Organize your music career goals and track progress</p>
         </div>
-        <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
-          <DialogTrigger asChild>
-            <Button className="bg-purple-600 hover:bg-purple-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Task
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Task</DialogTitle>
-              <DialogDescription>Add a new task to your music career workflow</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input placeholder="Task title" />
-              <Textarea placeholder="Task description" />
-              <div className="grid grid-cols-2 gap-4">
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">High Priority</SelectItem>
-                    <SelectItem value="medium">Medium Priority</SelectItem>
-                    <SelectItem value="low">Low Priority</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="production">Production</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
-                    <SelectItem value="creative">Creative</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="flex items-center space-x-3">
+          <Badge
+            className={`${isPremiumUser ? "bg-gradient-to-r from-yellow-400 to-orange-500" : "bg-gray-500"} text-white`}
+          >
+            {isPremiumUser && <Crown className="w-3 h-3 mr-1" />}
+            {user?.plan?.toUpperCase() || "FREE"}
+          </Badge>
+          <Button onClick={generateAITasks} variant="outline">
+            <Zap className="w-4 h-4 mr-2" />
+            Generate AI Tasks
+          </Button>
+          <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
+            <DialogTrigger asChild>
+              <Button className="bg-armie-secondary text-armie-primary hover:bg-armie-secondary/80">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Task
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Task</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    placeholder="Enter task title..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    placeholder="Enter task description..."
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Category</Label>
+                    <Select
+                      value={newTask.category}
+                      onValueChange={(value: Task["category"]) => setNewTask({ ...newTask, category: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="creative">Creative</SelectItem>
+                        <SelectItem value="business">Business</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="networking">Networking</SelectItem>
+                        <SelectItem value="learning">Learning</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Priority</Label>
+                    <Select
+                      value={newTask.priority}
+                      onValueChange={(value: Task["priority"]) => setNewTask({ ...newTask, priority: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="dueDate">Due Date (Optional)</Label>
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={newTask.dueDate}
+                    onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsAddingTask(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={addTask}>Add Task</Button>
+                </div>
               </div>
-              <Input type="date" />
-              <Button className="w-full bg-purple-600 hover:bg-purple-700">Create Task</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Task Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.length}</div>
-            <p className="text-xs text-muted-foreground">Active tasks</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.filter((t) => t.status === "in-progress").length}</div>
-            <p className="text-xs text-muted-foreground">Currently working on</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.filter((t) => t.status === "completed").length}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Great job!</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filter */}
+      {/* Progress Overview */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search tasks..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-              <SelectTrigger className="w-48">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Filter tasks" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tasks</SelectItem>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="high">High Priority</SelectItem>
-                <SelectItem value="medium">Medium Priority</SelectItem>
-                <SelectItem value="low">Low Priority</SelectItem>
-              </SelectContent>
-            </Select>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Progress Overview</h3>
+            <span className="text-sm text-muted-foreground">
+              {completedTasks} of {totalTasks} tasks completed
+            </span>
+          </div>
+          <Progress value={completionRate} className="h-3" />
+          <div className="flex justify-between text-sm text-muted-foreground mt-2">
+            <span>{completionRate.toFixed(0)}% Complete</span>
+            <span>{totalTasks - completedTasks} remaining</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tasks and Goals Tabs */}
-      <Tabs defaultValue="tasks" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="goals">Goals</TabsTrigger>
-        </TabsList>
+      {/* Filters and Sort */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tasks</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="ai-generated">AI Generated</SelectItem>
+            <SelectItem value="creative">Creative</SelectItem>
+            <SelectItem value="business">Business</SelectItem>
+            <SelectItem value="marketing">Marketing</SelectItem>
+            <SelectItem value="networking">Networking</SelectItem>
+            <SelectItem value="learning">Learning</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <TabsContent value="tasks" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Tasks</CardTitle>
-              <CardDescription>Manage and track your music career tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-4 h-4 border-2 border-gray-300 rounded flex-shrink-0"></div>
-                      <div className="flex items-center space-x-2">{getCategoryIcon(task.category)}</div>
-                      <div className="flex-1">
-                        <h3 className="font-medium">{task.title}</h3>
-                        <p className="text-sm text-muted-foreground">{task.description}</p>
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Badge className={getPriorityColor(task.priority)} variant="secondary">
-                            {task.priority}
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dueDate">Due Date</SelectItem>
+            <SelectItem value="priority">Priority</SelectItem>
+            <SelectItem value="category">Category</SelectItem>
+            <SelectItem value="status">Status</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Tasks List */}
+      <div className="space-y-4">
+        {filteredTasks.map((task) => {
+          const CategoryIcon = getCategoryIcon(task.category)
+          const isOverdue = task.dueDate && task.dueDate < new Date() && task.status !== "completed"
+
+          return (
+            <Card
+              key={task.id}
+              className={`transition-all duration-200 ${task.status === "completed" ? "opacity-75" : ""} ${isOverdue ? "border-red-200 bg-red-50/50" : ""}`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-3 flex-1">
+                    <Checkbox
+                      checked={task.status === "completed"}
+                      onCheckedChange={() => toggleTaskStatus(task.id)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3
+                          className={`font-semibold ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}
+                        >
+                          {task.title}
+                        </h3>
+                        {task.aiGenerated && (
+                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                            <Zap className="w-3 h-3 mr-1" />
+                            AI
                           </Badge>
-                          <Badge className={getStatusColor(task.status)} variant="secondary">
-                            {task.status}
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className={`text-xs ${getCategoryColor(task.category)}`}>
+                          <CategoryIcon className="w-3 h-3 mr-1" />
+                          {task.category}
+                        </Badge>
+                        <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>{task.priority} priority</Badge>
+                        {task.dueDate && (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${isOverdue ? "border-red-300 text-red-700" : ""}`}
+                          >
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {task.dueDate.toLocaleDateString()}
                           </Badge>
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            {new Date(task.dueDate).toLocaleDateString()}
-                          </div>
-                        </div>
-                        {task.progress > 0 && (
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between text-xs mb-1">
-                              <span>Progress</span>
-                              <span>{task.progress}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1">
-                              <div className="bg-purple-600 h-1 rounded-full" style={{ width: `${task.progress}%` }} />
-                            </div>
-                          </div>
                         )}
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Task
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Mark Complete
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Task
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-600" onClick={() => deleteTask(task.id)}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
 
-        <TabsContent value="goals" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Career Goals</CardTitle>
-              <CardDescription>Track your long-term music career objectives</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {goals.map((goal) => (
-                  <div key={goal.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold">{goal.title}</h3>
-                      <Badge className={getStatusColor(goal.status)} variant="secondary">
-                        {goal.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">{goal.description}</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Progress</span>
-                        <span>{goal.progress}% complete</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-purple-600 h-2 rounded-full" style={{ width: `${goal.progress}%` }} />
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>
-                          {goal.completedTasks} of {goal.tasks} tasks completed
-                        </span>
-                        <span>Due: {new Date(goal.deadline).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" className="w-full bg-white text-black">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add New Goal
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Empty State */}
+      {filteredTasks.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
+            <p className="text-muted-foreground mb-6">
+              {filter === "all"
+                ? "Create your first task to start organizing your music career goals"
+                : "No tasks match your current filter criteria"}
+            </p>
+            <div className="flex justify-center space-x-3">
+              <Button
+                onClick={() => setIsAddingTask(true)}
+                className="bg-armie-secondary text-armie-primary hover:bg-armie-secondary/80"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Task
+              </Button>
+              <Button onClick={generateAITasks} variant="outline">
+                <Zap className="w-4 h-4 mr-2" />
+                Generate AI Tasks
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
