@@ -1,678 +1,515 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/components/auth-provider"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Building,
-  Plus,
-  Search,
-  Download,
-  Eye,
-  Edit,
-  MoreVertical,
-  Calendar,
-  DollarSign,
   Music,
-  Crown,
-  Sparkles,
   TrendingUp,
-  AlertCircle,
+  DollarSign,
+  Users,
+  Play,
+  Download,
+  ExternalLink,
+  BookOpen,
   CheckCircle,
   Clock,
-  PlayCircle,
-  Radio,
-  Headphones,
+  AlertCircle,
+  Sparkles,
+  Globe,
+  BarChart3,
 } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import Image from "next/image"
+import Link from "next/link"
 
-interface RoyaltyPayment {
-  id: string
-  source: string
-  amount: number
-  period: string
-  status: "pending" | "paid" | "processing"
-  dueDate: Date
-  tracks: string[]
-  platform: "spotify" | "apple" | "youtube" | "radio" | "sync" | "mechanical"
-}
+export default function PublishingCenterPage() {
+  const [searchQuery, setSearchQuery] = useState("")
 
-interface PublishingAsset {
-  id: string
-  title: string
-  type: "song" | "album" | "ep"
-  registrationStatus: "registered" | "pending" | "unregistered"
-  copyrightOwnership: number
-  publishingShare: number
-  totalEarnings: number
-  monthlyEarnings: number
-  registrationDate?: Date
-}
-
-export default function PublishingHubPage() {
-  const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState("overview")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterPlatform, setFilterPlatform] = useState("all")
-
-  const isPremiumUser = user?.plan === "pro" || user?.plan === "enterprise"
-
-  const royaltyPayments: RoyaltyPayment[] = [
+  const distributionPlatforms = [
     {
-      id: "1",
-      source: "Spotify Streaming",
-      amount: 847.32,
-      period: "December 2024",
-      status: "paid",
-      dueDate: new Date("2024-01-15"),
-      tracks: ["Midnight Dreams", "City Lights", "Ocean Waves"],
-      platform: "spotify",
+      name: "Spotify",
+      status: "Connected",
+      streams: "12.4K",
+      revenue: "$89.32",
+      color: "bg-green-500",
     },
     {
-      id: "2",
-      source: "Apple Music",
-      amount: 623.18,
-      period: "December 2024",
-      status: "processing",
-      dueDate: new Date("2024-01-20"),
-      tracks: ["Midnight Dreams", "City Lights"],
-      platform: "apple",
+      name: "Apple Music",
+      status: "Connected",
+      streams: "8.7K",
+      revenue: "$67.21",
+      color: "bg-gray-800",
     },
     {
-      id: "3",
-      source: "YouTube Content ID",
-      amount: 234.56,
-      period: "December 2024",
-      status: "pending",
-      dueDate: new Date("2024-01-25"),
-      tracks: ["Ocean Waves", "Summer Nights"],
-      platform: "youtube",
+      name: "YouTube Music",
+      status: "Connected",
+      streams: "15.2K",
+      revenue: "$45.67",
+      color: "bg-red-500",
     },
     {
-      id: "4",
-      source: "Radio Airplay",
-      amount: 1250.0,
-      period: "Q4 2024",
-      status: "paid",
-      dueDate: new Date("2024-01-10"),
-      tracks: ["City Lights"],
-      platform: "radio",
-    },
-    {
-      id: "5",
-      source: "Sync License - TV Commercial",
-      amount: 5000.0,
-      period: "December 2024",
-      status: "paid",
-      dueDate: new Date("2024-01-05"),
-      tracks: ["Midnight Dreams"],
-      platform: "sync",
+      name: "Amazon Music",
+      status: "Pending",
+      streams: "0",
+      revenue: "$0.00",
+      color: "bg-orange-500",
     },
   ]
 
-  const publishingAssets: PublishingAsset[] = [
+  const recentReleases = [
     {
-      id: "1",
-      title: "Midnight Dreams",
-      type: "song",
-      registrationStatus: "registered",
-      copyrightOwnership: 100,
-      publishingShare: 100,
-      totalEarnings: 12847.32,
-      monthlyEarnings: 2341.18,
-      registrationDate: new Date("2023-06-15"),
+      title: "Summer Vibes",
+      type: "Single",
+      releaseDate: "2024-06-15",
+      status: "Live",
+      streams: "5.2K",
+      revenue: "$23.45",
     },
     {
-      id: "2",
-      title: "City Lights",
-      type: "song",
-      registrationStatus: "registered",
-      copyrightOwnership: 100,
-      publishingShare: 100,
-      totalEarnings: 8923.45,
-      monthlyEarnings: 1876.23,
-      registrationDate: new Date("2023-08-20"),
+      title: "Midnight Dreams EP",
+      type: "EP",
+      releaseDate: "2024-05-20",
+      status: "Live",
+      streams: "12.8K",
+      revenue: "$78.90",
     },
     {
-      id: "3",
-      title: "Ocean Waves",
-      type: "song",
-      registrationStatus: "pending",
-      copyrightOwnership: 100,
-      publishingShare: 100,
-      totalEarnings: 3456.78,
-      monthlyEarnings: 892.34,
-    },
-    {
-      id: "4",
-      title: "Summer Nights EP",
-      type: "ep",
-      registrationStatus: "registered",
-      copyrightOwnership: 100,
-      publishingShare: 100,
-      totalEarnings: 15234.67,
-      monthlyEarnings: 3124.89,
-      registrationDate: new Date("2023-05-10"),
+      title: "Acoustic Sessions",
+      type: "Album",
+      releaseDate: "2024-07-01",
+      status: "Scheduled",
+      streams: "0",
+      revenue: "$0.00",
     },
   ]
-
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case "spotify":
-        return PlayCircle
-      case "apple":
-        return Music
-      case "youtube":
-        return PlayCircle
-      case "radio":
-        return Radio
-      case "sync":
-        return Headphones
-      case "mechanical":
-        return Music
-      default:
-        return Music
-    }
-  }
-
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case "spotify":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-      case "apple":
-        return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
-      case "youtube":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-      case "radio":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-      case "sync":
-        return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-      case "mechanical":
-        return "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
-      default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "paid":
-        return CheckCircle
-      case "processing":
-        return Clock
-      case "pending":
-        return AlertCircle
-      default:
-        return Clock
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "paid":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-      case "processing":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-      case "pending":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-      default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
-    }
-  }
-
-  const totalEarnings = royaltyPayments.reduce((sum, payment) => sum + payment.amount, 0)
-  const pendingPayments = royaltyPayments.filter((p) => p.status === "pending").length
-  const registeredAssets = publishingAssets.filter((a) => a.registrationStatus === "registered").length
-  const monthlyGrowth = 12.5 // Mock growth percentage
-
-  const filteredPayments = royaltyPayments.filter((payment) => {
-    const matchesSearch = payment.source.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesPlatform = filterPlatform === "all" || payment.platform === filterPlatform
-    return matchesSearch && matchesPlatform
-  })
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex-1 space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <Building className="h-8 w-8 text-green-600" />
-            Publishing Hub
-          </h1>
-          <p className="text-muted-foreground">Manage your music rights, royalties, and publishing income</p>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Image src="/images/armie-logo.png" alt="ARMIE" width={40} height={40} className="rounded-lg" />
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">Publishing Center</h1>
+              <p className="text-slate-600">Manage your music distribution, royalties, and publishing</p>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Badge
-            className={`${isPremiumUser ? "bg-gradient-to-r from-yellow-400 to-orange-500" : "bg-gray-500"} text-white`}
-          >
-            {isPremiumUser && <Crown className="w-3 h-3 mr-1" />}
-            {user?.plan?.toUpperCase() || "FREE"}
-          </Badge>
-          <Button className="bg-green-600 hover:bg-green-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Register New Work
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export Data
+          </Button>
+          <Button>
+            <Music className="w-4 h-4 mr-2" />
+            New Release
           </Button>
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Total Earnings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">${totalEarnings.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              <TrendingUp className="w-3 h-3 mr-1 text-green-600" />+{monthlyGrowth}% from last month
-            </p>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Total Streams</p>
+                <p className="text-2xl font-bold text-slate-800">47.3K</p>
+                <p className="text-xs text-green-600 flex items-center mt-1">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  +12% from last month
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Play className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              <Clock className="w-4 h-4 mr-2" />
-              Pending Payments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{pendingPayments}</div>
-            <p className="text-xs text-muted-foreground">Awaiting processing</p>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Monthly Revenue</p>
+                <p className="text-2xl font-bold text-slate-800">$342.18</p>
+                <p className="text-xs text-green-600 flex items-center mt-1">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  +8% from last month
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Registered Works
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{registeredAssets}</div>
-            <p className="text-xs text-muted-foreground">Copyright protected</p>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Active Releases</p>
+                <p className="text-2xl font-bold text-slate-800">12</p>
+                <p className="text-xs text-slate-500 mt-1">Across all platforms</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Music className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              <Music className="w-4 h-4 mr-2" />
-              Active Catalogs
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{publishingAssets.length}</div>
-            <p className="text-xs text-muted-foreground">Earning royalties</p>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Monthly Listeners</p>
+                <p className="text-2xl font-bold text-slate-800">2.4K</p>
+                <p className="text-xs text-green-600 flex items-center mt-1">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  +15% from last month
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="royalties">Royalty Payments</TabsTrigger>
-          <TabsTrigger value="catalog">Publishing Catalog</TabsTrigger>
+          <TabsTrigger value="distribution">Distribution</TabsTrigger>
+          <TabsTrigger value="royalties">Royalties</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="academy">Academy</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Revenue Breakdown */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Releases */}
             <Card>
               <CardHeader>
-                <CardTitle>Revenue by Platform</CardTitle>
-                <CardDescription>Your earnings breakdown across different platforms</CardDescription>
+                <CardTitle>Recent Releases</CardTitle>
+                <CardDescription>Your latest music releases and their performance</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {[
-                  { platform: "Spotify", amount: 847.32, percentage: 35, icon: PlayCircle, color: "bg-green-500" },
-                  { platform: "Apple Music", amount: 623.18, percentage: 26, icon: Music, color: "bg-gray-500" },
-                  {
-                    platform: "Sync Licensing",
-                    amount: 5000.0,
-                    percentage: 25,
-                    icon: Headphones,
-                    color: "bg-purple-500",
-                  },
-                  { platform: "Radio Airplay", amount: 1250.0, percentage: 14, icon: Radio, color: "bg-blue-500" },
-                ].map((item) => (
-                  <div key={item.platform} className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full ${item.color} flex items-center justify-center`}>
-                      <item.icon className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">{item.platform}</span>
-                        <span className="text-sm font-bold">${item.amount.toLocaleString()}</span>
+                {recentReleases.map((release, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center">
+                        <Music className="w-5 h-5 text-slate-600" />
                       </div>
-                      <Progress value={item.percentage} className="h-2" />
+                      <div>
+                        <p className="font-medium">{release.title}</p>
+                        <p className="text-sm text-slate-500">
+                          {release.type} • {release.releaseDate}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={release.status === "Live" ? "default" : "secondary"}>{release.status}</Badge>
+                      <p className="text-sm text-slate-500 mt-1">{release.streams} streams</p>
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
+            {/* Distribution Status */}
             <Card>
               <CardHeader>
-                <CardTitle>Top Performing Tracks</CardTitle>
-                <CardDescription>Your highest earning songs this month</CardDescription>
+                <CardTitle>Distribution Status</CardTitle>
+                <CardDescription>Your music across streaming platforms</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {publishingAssets
-                  .sort((a, b) => b.monthlyEarnings - a.monthlyEarnings)
-                  .slice(0, 4)
-                  .map((asset, index) => (
-                    <div key={asset.id} className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">{index + 1}</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">{asset.title}</span>
-                          <span className="text-sm font-bold text-green-600">
-                            ${asset.monthlyEarnings.toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {asset.copyrightOwnership}% ownership • {asset.type}
-                        </p>
+                {distributionPlatforms.map((platform, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${platform.color}`}></div>
+                      <div>
+                        <p className="font-medium">{platform.name}</p>
+                        <p className="text-sm text-slate-500">{platform.streams} streams</p>
                       </div>
                     </div>
-                  ))}
+                    <div className="text-right">
+                      <Badge variant={platform.status === "Connected" ? "default" : "secondary"}>
+                        {platform.status}
+                      </Badge>
+                      <p className="text-sm text-slate-500 mt-1">{platform.revenue}</p>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
 
-          {/* Recent Activity */}
+        <TabsContent value="academy" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">Publishing Academy</h2>
+              <p className="text-slate-600">
+                Learn everything you need to know about music publishing and distribution
+              </p>
+            </div>
+            <Button asChild>
+              <Link href="/dashboard/publishing/academy">
+                <BookOpen className="w-4 h-4 mr-2" />
+                View All Courses
+              </Link>
+            </Button>
+          </div>
+
+          {/* Quick Setup Checklist */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Publishing Activity</CardTitle>
-              <CardDescription>Latest updates on your publishing portfolio</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                Quick Setup Checklist
+              </CardTitle>
+              <CardDescription>Essential steps to get your music business set up properly</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">Register with P.R.O.</p>
+                      <p className="text-sm text-slate-500">ASCAP, BMI, or SESAC</p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href="https://www.ascap.com" target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <Clock className="w-5 h-5 text-orange-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">Get Your E.I.N.</p>
+                      <p className="text-sm text-slate-500">Business tax ID number</p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href="https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">Copyright Your Music</p>
+                      <p className="text-sm text-slate-500">Protect your creative works</p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href="https://www.copyright.gov" target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">Choose Distribution</p>
+                      <p className="text-sm text-slate-500">TuneCore, DistroKid, CD Baby</p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href="https://www.tunecore.com" target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Featured Courses */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Globe className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <Badge variant="secondary">Beginner</Badge>
+                </div>
+                <CardTitle className="text-lg">How To: Distribute Your Music</CardTitle>
+                <CardDescription>Learn to navigate DSPs and maximize your reach across all platforms</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">7 Chapters</span>
+                    <span className="text-slate-500">2-3 hours</span>
+                  </div>
+                  <Button className="w-full" asChild>
+                    <Link href="/dashboard/publishing/academy">Start Course</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                  </div>
+                  <Badge variant="secondary">Beginner</Badge>
+                </div>
+                <CardTitle className="text-lg">Register with P.R.O.</CardTitle>
+                <CardDescription>Complete guide to registering with performing rights organizations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">5 Chapters</span>
+                    <span className="text-slate-500">1-2 hours</span>
+                  </div>
+                  <Button className="w-full" asChild>
+                    <Link href="/dashboard/publishing/academy">Start Course</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <Badge variant="secondary">Intermediate</Badge>
+                </div>
+                <CardTitle className="text-lg">Music Licensing Mastery</CardTitle>
+                <CardDescription>
+                  Monetize your music through sync licensing and placement opportunities
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">8 Chapters</span>
+                    <span className="text-slate-500">3-4 hours</span>
+                  </div>
+                  <Button className="w-full" asChild>
+                    <Link href="/dashboard/publishing/academy">Start Course</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="distribution">
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribution Platforms</CardTitle>
+              <CardDescription>Manage your music distribution across streaming services</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {[
-                  {
-                    action: "Royalty payment received",
-                    description: "$847.32 from Spotify streaming",
-                    time: "2 hours ago",
-                    icon: DollarSign,
-                    color: "text-green-600",
-                  },
-                  {
-                    action: "Copyright registration completed",
-                    description: "Ocean Waves - Registration #TX123456",
-                    time: "1 day ago",
-                    icon: CheckCircle,
-                    color: "text-blue-600",
-                  },
-                  {
-                    action: "Sync license opportunity",
-                    description: "New placement request for Midnight Dreams",
-                    time: "3 days ago",
-                    icon: Headphones,
-                    color: "text-purple-600",
-                  },
-                  {
-                    action: "Performance royalty statement",
-                    description: "Q4 2024 radio airplay report available",
-                    time: "1 week ago",
-                    icon: Radio,
-                    color: "text-orange-600",
-                  },
-                ].map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center`}>
-                      <activity.icon className={`w-4 h-4 ${activity.color}`} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{activity.action}</p>
-                      <p className="text-sm text-muted-foreground">{activity.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {distributionPlatforms.map((platform, index) => (
+                  <Card key={index}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold">{platform.name}</h3>
+                        <Badge variant={platform.status === "Connected" ? "default" : "secondary"}>
+                          {platform.status}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-slate-500">Streams</span>
+                          <span className="font-medium">{platform.streams}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-slate-500">Revenue</span>
+                          <span className="font-medium">{platform.revenue}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="royalties" className="space-y-6">
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search payments..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
-              />
-            </div>
-            <Select value={filterPlatform} onValueChange={setFilterPlatform}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by platform" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Platforms</SelectItem>
-                <SelectItem value="spotify">Spotify</SelectItem>
-                <SelectItem value="apple">Apple Music</SelectItem>
-                <SelectItem value="youtube">YouTube</SelectItem>
-                <SelectItem value="radio">Radio</SelectItem>
-                <SelectItem value="sync">Sync Licensing</SelectItem>
-                <SelectItem value="mechanical">Mechanical</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Royalty Payments List */}
-          <div className="space-y-4">
-            {filteredPayments.map((payment) => {
-              const PlatformIcon = getPlatformIcon(payment.platform)
-              const StatusIcon = getStatusIcon(payment.status)
-
-              return (
-                <Card key={payment.id} className="transition-all duration-200 hover:shadow-lg">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4 flex-1">
-                        <div
-                          className={`w-12 h-12 rounded-lg ${getPlatformColor(payment.platform)} flex items-center justify-center`}
-                        >
-                          <PlatformIcon className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h3 className="font-semibold text-lg">{payment.source}</h3>
-                            <Badge className={`text-xs ${getStatusColor(payment.status)}`}>
-                              <StatusIcon className="w-3 h-3 mr-1" />
-                              {payment.status}
-                            </Badge>
-                          </div>
-                          <p className="text-muted-foreground mb-3">
-                            <strong>Period:</strong> {payment.period} • <strong>Due:</strong>{" "}
-                            {payment.dueDate.toLocaleDateString()}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center">
-                              <DollarSign className="w-4 h-4 mr-1 text-green-600" />
-                              <span className="font-bold text-green-600">${payment.amount.toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Music className="w-4 h-4 mr-1" />
-                              {payment.tracks.length} tracks
-                            </div>
-                            <Badge className={`text-xs ${getPlatformColor(payment.platform)}`}>
-                              {payment.platform}
-                            </Badge>
-                          </div>
-                          <div className="mt-2">
-                            <p className="text-xs text-muted-foreground">
-                              <strong>Tracks:</strong> {payment.tracks.join(", ")}
-                            </p>
-                          </div>
-                        </div>
+        <TabsContent value="royalties">
+          <Card>
+            <CardHeader>
+              <CardTitle>Royalty Breakdown</CardTitle>
+              <CardDescription>Track your earnings across different revenue streams</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-green-600">$234.56</p>
+                        <p className="text-sm text-slate-500">Streaming Royalties</p>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Statement
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download Report
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Details
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-blue-600">$87.32</p>
+                        <p className="text-sm text-slate-500">Performance Royalties</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-purple-600">$20.30</p>
+                        <p className="text-sm text-slate-500">Sync Licensing</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="catalog" className="space-y-6">
-          {/* Publishing Catalog */}
-          <div className="space-y-4">
-            {publishingAssets.map((asset) => (
-              <Card key={asset.id} className="transition-all duration-200 hover:shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4 flex-1">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                        <Music className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-lg">{asset.title}</h3>
-                          <Badge
-                            className={`text-xs ${
-                              asset.registrationStatus === "registered"
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                                : asset.registrationStatus === "pending"
-                                  ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-                                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                            }`}
-                          >
-                            {asset.registrationStatus}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {asset.type}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Copyright Ownership</p>
-                            <p className="font-semibold">{asset.copyrightOwnership}%</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Publishing Share</p>
-                            <p className="font-semibold">{asset.publishingShare}%</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Total Earnings</p>
-                            <p className="font-semibold text-green-600">${asset.totalEarnings.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Monthly Earnings</p>
-                            <p className="font-semibold text-blue-600">${asset.monthlyEarnings.toLocaleString()}</p>
-                          </div>
-                        </div>
-                        {asset.registrationDate && (
-                          <p className="text-xs text-muted-foreground">
-                            <Calendar className="w-3 h-3 inline mr-1" />
-                            Registered: {asset.registrationDate.toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Download className="w-4 h-4 mr-2" />
-                          Export Data
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Registration
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <TabsContent value="analytics">
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Analytics</CardTitle>
+              <CardDescription>Detailed insights into your music performance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center h-64 text-slate-500">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 mx-auto mb-4" />
+                  <p>Analytics dashboard coming soon</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Premium CTA for Free Users */}
-      {!isPremiumUser && (
-        <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200 dark:from-green-950/20 dark:to-blue-950/20 dark:border-green-800">
-          <CardContent className="p-8 text-center">
-            <Crown className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold mb-2">Unlock Advanced Publishing Features</h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Get access to automated royalty collection, advanced analytics, copyright registration assistance, sync
-              licensing opportunities, and direct publisher relationships with Pro.
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center">
-                <DollarSign className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <p className="text-sm font-medium">Automated Collection</p>
-              </div>
-              <div className="text-center">
-                <TrendingUp className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-sm font-medium">Advanced Analytics</p>
-              </div>
-              <div className="text-center">
-                <CheckCircle className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                <p className="text-sm font-medium">Copyright Protection</p>
-              </div>
-              <div className="text-center">
-                <Headphones className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                <p className="text-sm font-medium">Sync Opportunities</p>
-              </div>
-            </div>
-            <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600">
-              <Sparkles className="w-5 h-5 mr-2" />
-              Upgrade to Pro
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

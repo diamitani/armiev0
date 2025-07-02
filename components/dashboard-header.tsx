@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAuth } from "@/components/auth-provider"
+import Image from "next/image"
 
 export function DashboardHeader() {
   const { user } = useAuth()
@@ -24,7 +25,15 @@ export function DashboardHeader() {
       <div className="flex h-16 items-center gap-4 px-6">
         <SidebarTrigger className="-ml-1" />
 
-        <div className="flex-1 flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Image src="/images/armie-logo.png" alt="ARMIE" width={32} height={32} className="rounded-lg" />
+          <div className="hidden sm:block">
+            <h1 className="text-lg font-semibold text-slate-800">ARMIE</h1>
+            <p className="text-xs text-slate-500">AI Music Career Assistant</p>
+          </div>
+        </div>
+
+        <div className="flex-1 flex items-center gap-4 ml-6">
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search across all hubs..." className="pl-10" />

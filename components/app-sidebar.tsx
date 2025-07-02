@@ -2,23 +2,27 @@
 
 import type * as React from "react"
 import {
-  AudioWaveform,
-  Command,
+  BookOpen,
+  Bot,
   GalleryVerticalEnd,
   FileText,
-  Home,
-  Brain,
-  Briefcase,
+  Users,
   Music,
+  Calendar,
+  Briefcase,
+  Shield,
+  DollarSign,
+  Wand2,
   MessageSquare,
-  Sparkles,
-  Settings,
-  HelpCircle,
   PenTool,
-  Palette,
-  Share2,
-  Radio,
+  ImageIcon,
   Mail,
+  FileImage,
+  Share2,
+  User,
+  Home,
+  BookOpenCheck,
+  GraduationCap,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -26,6 +30,7 @@ import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
 
+// This is sample data.
 const data = {
   user: {
     name: "Alex Rivera",
@@ -34,19 +39,9 @@ const data = {
   },
   teams: [
     {
-      name: "ARMIE Studio",
+      name: "ARMIE",
       logo: GalleryVerticalEnd,
-      plan: "Personal",
-    },
-    {
-      name: "Independent Artist",
-      logo: AudioWaveform,
-      plan: "Personal",
-    },
-    {
-      name: "Music Collective",
-      logo: Command,
-      plan: "Personal",
+      plan: "Pro",
     },
   ],
   navMain: [
@@ -55,60 +50,47 @@ const data = {
       url: "/dashboard",
       icon: Home,
       isActive: true,
-      description: "Your main workspace",
-    },
-    {
-      title: "ARMIE",
-      url: "/dashboard",
-      icon: MessageSquare,
-      description: "AI music career assistant",
     },
     {
       title: "AI Assistants",
       url: "/dashboard/assistants",
-      icon: Sparkles,
+      icon: Bot,
+      isCollapsible: true,
       items: [
         {
           title: "ARMIE Chat",
-          url: "/dashboard",
+          url: "/dashboard/assistants/armie-chat",
           icon: MessageSquare,
-          description: "Your personal music career assistant",
         },
         {
           title: "Lyric Generator",
           url: "/dashboard/assistants/lyric-generator",
           icon: PenTool,
-          description: "AI-powered songwriting tool",
         },
         {
           title: "Cover Art Generator",
           url: "/dashboard/assistants/cover-art-generator",
-          icon: Palette,
-          description: "Create stunning album artwork",
-        },
-        {
-          title: "Social Media Assistant",
-          url: "/dashboard/assistants/social-media-assistant",
-          icon: Share2,
-          description: "Optimize your social presence",
-        },
-        {
-          title: "Artist Bio Generator",
-          url: "/dashboard/assistants/artist-bio-generator",
-          icon: FileText,
-          description: "Professional artist biographies",
-        },
-        {
-          title: "Press Release Generator",
-          url: "/dashboard/assistants/press-release-generator",
-          icon: Radio,
-          description: "Create professional press releases",
+          icon: ImageIcon,
         },
         {
           title: "Email Generator",
           url: "/dashboard/assistants/email-generator",
           icon: Mail,
-          description: "Craft professional emails",
+        },
+        {
+          title: "Press Release Generator",
+          url: "/dashboard/assistants/press-release-generator",
+          icon: FileImage,
+        },
+        {
+          title: "Artist Bio Generator",
+          url: "/dashboard/assistants/artist-bio-generator",
+          icon: User,
+        },
+        {
+          title: "Social Media Assistant",
+          url: "/dashboard/assistants/social-media-assistant",
+          icon: Share2,
         },
       ],
     },
@@ -116,70 +98,76 @@ const data = {
       title: "Contracts",
       url: "/dashboard/contracts",
       icon: FileText,
-      description: "Manage your agreements",
+      isCollapsible: true,
       items: [
         {
-          title: "All Contracts",
-          url: "/dashboard/contracts",
-          icon: FileText,
-          description: "View all your contracts",
+          title: "Contract Wizard",
+          url: "/dashboard/contracts/wizard",
+          icon: Wand2,
         },
         {
           title: "Templates",
           url: "/dashboard/contracts/templates",
-          icon: Briefcase,
-          description: "Pre-built contract templates",
+          icon: BookOpen,
         },
         {
-          title: "Contract Wizard",
-          url: "/dashboard/contracts/wizard",
-          icon: Sparkles,
-          description: "AI-guided contract creation",
+          title: "Artist Management",
+          url: "/contracts/artist-management",
+          icon: Users,
+        },
+        {
+          title: "Recording Contract",
+          url: "/contracts/recording-contract",
+          icon: Music,
+        },
+        {
+          title: "Performance Booking",
+          url: "/contracts/performance-booking",
+          icon: Calendar,
+        },
+        {
+          title: "Producer Agreement",
+          url: "/contracts/producer-agreement",
+          icon: Briefcase,
+        },
+        {
+          title: "Licensing Deal",
+          url: "/contracts/licensing-deal",
+          icon: Shield,
+        },
+        {
+          title: "Distribution Deal",
+          url: "/contracts/distribution-deal",
+          icon: DollarSign,
         },
       ],
     },
     {
-      title: "Publishing Center",
+      title: "Publishing",
       url: "/dashboard/publishing",
-      icon: Music,
-      description: "Distribution & royalties",
-    },
-  ],
-  quickActions: [
-    {
-      title: "Knowledge Base",
-      url: "/knowledge-base",
-      icon: Brain,
-      description: "Search resources",
-    },
-    {
-      title: "Settings",
-      url: "/dashboard/settings",
-      icon: Settings,
-      description: "Account preferences",
-    },
-    {
-      title: "Help & Support",
-      url: "/dashboard/help",
-      icon: HelpCircle,
-      description: "Get assistance",
+      icon: BookOpenCheck,
+      isCollapsible: true,
+      items: [
+        {
+          title: "Academy",
+          url: "/dashboard/publishing/academy",
+          icon: GraduationCap,
+        },
+      ],
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="icon" className="border-r border-slate-200 bg-slate-50/50 backdrop-blur-sm" {...props}>
-      <SidebarHeader className="border-b border-slate-200/60 bg-white/80 backdrop-blur-sm">
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-      <SidebarContent className="bg-slate-50/30">
+      <SidebarContent>
         <NavMain items={data.navMain} />
-        <div className="mt-auto">
-          <NavMain items={data.quickActions} title="Quick Actions" />
-        </div>
       </SidebarContent>
-      <SidebarFooter className="border-t border-slate-200/60 bg-white/80 backdrop-blur-sm">
+      <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
