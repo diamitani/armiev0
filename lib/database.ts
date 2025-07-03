@@ -13,16 +13,18 @@ export class DatabaseService {
   static async createArtist(data: {
     name: string
     email: string
+    password_hash: string
     bio?: string
     website_url?: string
     social_links?: Record<string, string>
     subscription_tier?: string
   }) {
     const result = await sql`
-      INSERT INTO artists (name, email, bio, website_url, social_links, subscription_tier)
-      VALUES (${data.name}, ${data.email}, ${data.bio || null}, ${data.website_url || null}, 
-              ${JSON.stringify(data.social_links || {})}, ${data.subscription_tier || "free"})
-      RETURNING *
+      INSERT INTO artists (name, email, password_hash, bio, website_url, social_links, subscription_tier)
+      VALUES (${data.name}, ${data.email}, ${data.password_hash}, ${data.bio || null}, 
+              ${data.website_url || null}, ${JSON.stringify(data.social_links || {})}, 
+              ${data.subscription_tier || "free"})
+      RETURNING id, name, email, bio, website_url, social_links, subscription_tier, created_at
     `
     return result[0]
   }
@@ -36,9 +38,149 @@ export class DatabaseService {
 
   static async getArtistById(id: string) {
     const result = await sql`
-      SELECT * FROM artists WHERE id = ${id} AND is_active = true
+      SELECT id, name, email, bio, website_url, social_links, subscription_tier, created_at
+      FROM artists WHERE id = ${id} AND is_active = true
     `
     return result[0] || null
+  }
+
+  // Contracts
+  static async createContract(data: {
+    title: string
+    type: string
+    counterparty_name: string
+    counterparty_email: string
+    start_date: string
+    end_date?: string
+    value?: number
+    currency: string
+    terms: string
+    status: string
+    artist_id: string
+    metadata?: Record<string, any>
+  }) {
+    const result = await sql`
+      INSERT INTO contracts (
+        title, type, counterparty_name, counterparty_email, start_date, end_date,
+        value, currency, terms, status, artist_id, metadata
+      )
+      VALUES (
+        ${data.title}, ${data.type}, ${data.counterparty_name}, ${data.counterparty_email},
+        ${data.start_date}, ${data.end_date || null}, ${data.value || null}, ${data.currency},
+        ${data.terms}, ${data.status}, ${data.artist_id}, ${JSON.stringify(data.metadata || {})}
+      )
+      RETURNING *
+    `
+    return result[0]
+  }
+
+  static async getContractById(id: string) {
+    const result = await sql`
+      SELECT * FROM contracts WHERE id = ${id} AND is_deleted = false
+    `
+    return result[0] || null
+  }
+
+  static async getContractsByArtist(
+    artist_id: string,
+    options: {
+      page?: number
+      limit?: number
+      type?: string
+      status?: string
+      search?: string
+    } = {},
+  ) {
+    const { page = 1, limit = 20, type, status, search } = options
+    const offset = (page - 1) * limit
+
+    let whereClause = `WHERE artist_id = ${artist_id} AND is_deleted = false`
+
+    if (type) {
+      whereClause += ` AND type = '${type}'`
+    }
+
+    if (status) {
+      whereClause += ` AND status = '${status}'`
+    }
+
+    if (search) {
+      whereClause += ` AND (title ILIKE '%${search}%' OR counterparty_name ILIKE '%${search}%')`
+    }
+
+    const [contracts, countResult] = await Promise.all([
+      sql`
+        SELECT * FROM contracts 
+        ${sql.unsafe(whereClause)}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `,
+      sql`
+        SELECT COUNT(*) as total FROM contracts 
+        ${sql.unsafe(whereClause)}
+      `,
+    ])
+
+    const total = Number.parseInt(countResult[0].total)
+    const totalPages = Math.ceil(total / limit)
+
+    return {
+      data: contracts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    }
+  }
+
+  static async updateContract(
+    id: string,
+    data: Partial<{
+      title: string
+      counterparty_name: string
+      counterparty_email: string
+      start_date: string
+      end_date: string
+      value: number
+      currency: string
+      terms: string
+      status: string
+      metadata: Record<string, any>
+    }>,
+  ) {
+    const updates = Object.entries(data)
+      .filter(([_, value]) => value !== undefined)
+      .map(([key, value]) => {
+        if (key === "metadata") {
+          return `${key} = '${JSON.stringify(value)}'`
+        }
+        return `${key} = '${value}'`
+      })
+      .join(", ")
+
+    if (!updates) {
+      throw new Error("No valid updates provided")
+    }
+
+    const result = await sql`
+      UPDATE contracts 
+      SET ${sql.unsafe(updates)}, updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `
+    return result[0]
+  }
+
+  static async deleteContract(id: string) {
+    await sql`
+      UPDATE contracts 
+      SET is_deleted = true, updated_at = NOW()
+      WHERE id = ${id}
+    `
   }
 
   // Assistants
@@ -68,20 +210,23 @@ export class DatabaseService {
     return result[0] || null
   }
 
-  static async getAssistantsByArtist(artist_id: string) {
-    const result = await sql`
+  static async getAssistantsByArtist(artist_id: string, category?: string) {
+    let query = sql`
       SELECT * FROM assistants 
       WHERE artist_id = ${artist_id} AND is_active = true
+    `
+
+    if (category) {
+      query = sql`
+        SELECT * FROM assistants 
+        WHERE artist_id = ${artist_id} AND is_active = true AND category = ${category}
+      `
+    }
+
+    const result = await query`
       ORDER BY usage_count DESC, created_at DESC
     `
     return result
-  }
-
-  static async getAssistantByOpenAIId(openai_id: string) {
-    const result = await sql`
-      SELECT * FROM assistants WHERE openai_id = ${openai_id} AND is_active = true
-    `
-    return result[0] || null
   }
 
   static async incrementAssistantUsage(assistant_id: string) {
@@ -90,6 +235,24 @@ export class DatabaseService {
       SET usage_count = usage_count + 1, last_used_at = NOW()
       WHERE id = ${assistant_id}
     `
+  }
+
+  // Files
+  static async createFile(data: {
+    artist_id: string
+    filename: string
+    secure_filename: string
+    file_type: string
+    file_size: number
+    blob_url: string
+  }) {
+    const result = await sql`
+      INSERT INTO files (artist_id, filename, secure_filename, file_type, file_size, blob_url)
+      VALUES (${data.artist_id}, ${data.filename}, ${data.secure_filename}, 
+              ${data.file_type}, ${data.file_size}, ${data.blob_url})
+      RETURNING *
+    `
+    return result[0]
   }
 
   // Chats
@@ -146,13 +309,6 @@ export class DatabaseService {
     `
   }
 
-  static async getChatMessageCount(chat_id: string) {
-    const result = await sql`
-      SELECT COUNT(*) as count FROM messages WHERE chat_id = ${chat_id}
-    `
-    return Number.parseInt(result[0].count)
-  }
-
   // Messages
   static async createMessage(data: {
     chat_id: string
@@ -205,16 +361,5 @@ export class DatabaseService {
         total_assistant_usage: 0,
       }
     )
-  }
-
-  static async getPopularAssistants(artist_id: string, limit = 10) {
-    const result = await sql`
-      SELECT name, usage_count, last_used_at, category
-      FROM assistants
-      WHERE artist_id = ${artist_id} AND is_active = true
-      ORDER BY usage_count DESC, last_used_at DESC NULLS LAST
-      LIMIT ${limit}
-    `
-    return result
   }
 }

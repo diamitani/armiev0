@@ -1,190 +1,291 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Send, Bot, User, Copy, Download, ArrowLeft, Loader2, FileText, Sparkles, MessageSquare } from "lucide-react"
-import Link from "next/link"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, ArrowLeft, ArrowRight, MessageSquare, Download, Copy, CheckCircle, Wand2 } from "lucide-react"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
-interface Message {
-  id: string
-  role: "user" | "assistant"
-  content: string
-  timestamp: Date
+interface ContractData {
+  title: string
+  type: string
+  counterparty_name: string
+  counterparty_email: string
+  start_date: Date | undefined
+  end_date: Date | undefined
+  value: string
+  currency: string
+  terms: string
+  additional_terms: string
 }
 
-const contractTemplates = {
-  "artist-management": {
-    name: "Artist Management Agreement",
-    description: "Comprehensive agreement between artist and manager",
-    prompt:
-      "I need help creating an artist management agreement. Please guide me through the key terms including commission rates, responsibilities, and contract duration.",
+const contractTypes = [
+  {
+    value: "artist-management",
+    label: "Artist Management Agreement",
+    description: "Comprehensive management services contract",
+    icon: "👤",
   },
-  "recording-contract": {
-    name: "Recording Contract",
-    description: "Agreement between artist and record label",
-    prompt:
-      "I want to create a recording contract. Help me understand and draft terms for advances, royalties, album delivery, and rights ownership.",
+  {
+    value: "recording-contract",
+    label: "Recording Contract",
+    description: "Music recording and production agreement",
+    icon: "🎵",
   },
-  "publishing-deal": {
-    name: "Music Publishing Agreement",
-    description: "Contract for publishing rights and royalties",
-    prompt:
-      "I need a music publishing agreement. Please help me with publishing splits, administration rights, and royalty terms.",
+  {
+    value: "publishing-deal",
+    label: "Music Publishing Agreement",
+    description: "Rights management and royalty distribution",
+    icon: "📝",
   },
-  "producer-agreement": {
-    name: "Producer Agreement",
-    description: "Contract between artist and producer",
-    prompt:
-      "I want to create a producer agreement. Help me with producer fees, royalty points, credits, and ownership terms.",
+  {
+    value: "producer-agreement",
+    label: "Producer Agreement",
+    description: "Music production services contract",
+    icon: "🎛️",
   },
-  "distribution-agreement": {
-    name: "Distribution Agreement",
-    description: "Contract for music distribution services",
-    prompt:
-      "I need a distribution agreement. Please guide me through distribution channels, revenue splits, and territory rights.",
+  {
+    value: "performance-agreement",
+    label: "Performance Agreement",
+    description: "Live performance booking contract",
+    icon: "🎤",
   },
-  "collaboration-agreement": {
-    name: "Artist Collaboration Agreement",
-    description: "Agreement between collaborating artists",
-    prompt:
-      "I want to create a collaboration agreement between artists. Help me with revenue sharing, credits, and ownership rights.",
+  {
+    value: "collaboration-agreement",
+    label: "Artist Collaboration Agreement",
+    description: "Joint creative project contract",
+    icon: "🤝",
   },
-}
-
-const suggestedPrompts = [
-  "Help me create a simple artist management contract",
-  "What should I include in a recording agreement?",
-  "Explain the key terms in a music publishing deal",
-  "Draft a producer agreement with standard terms",
-  "Create a collaboration agreement for two artists",
-  "What are typical royalty rates in recording contracts?",
-  "Help me understand music contract terminology",
-  "Create a distribution agreement template",
 ]
 
-export default function ContractWizardPage() {
+const currencies = ["USD", "EUR", "GBP", "CAD", "AUD"]
+
+export default function ContractWizard() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const templateId = searchParams.get("template")
-  const [messages, setMessages] = useState<Message[]>([])
-  const [inputMessage, setInputMessage] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null)
+  const preselectedTemplate = searchParams.get("template")
 
-  useEffect(() => {
-    // Initialize with welcome message and template-specific prompt
-    const template = templateId ? contractTemplates[templateId as keyof typeof contractTemplates] : null
-    setSelectedTemplate(template)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [contractData, setContractData] = useState<ContractData>({
+    title: "",
+    type: preselectedTemplate || "",
+    counterparty_name: "",
+    counterparty_email: "",
+    start_date: undefined,
+    end_date: undefined,
+    value: "",
+    currency: "USD",
+    terms: "",
+    additional_terms: "",
+  })
 
-    const welcomeMessage: Message = {
-      id: "welcome",
+  const [chatMessages, setChatMessages] = useState([
+    {
       role: "assistant",
-      content: template
-        ? `Welcome to the Contract Wizard! I see you're interested in creating a **${template.name}**. ${template.description}.\n\nI'll help you create a comprehensive contract tailored to your needs. Let's start with some questions about your specific situation.`
-        : "Welcome to the Contract Wizard! I'm here to help you create professional music industry contracts. Whether you need management agreements, recording contracts, publishing deals, or any other music business contract, I'll guide you through the process step by step.\n\nWhat type of contract would you like to create today?",
-      timestamp: new Date(),
-    }
-    setMessages([welcomeMessage])
+      content: preselectedTemplate
+        ? `Hi! I see you're creating a ${contractTypes.find((t) => t.value === preselectedTemplate)?.label}. I'm here to help you customize this contract with your specific details. What questions do you have about this type of agreement?`
+        : "Hi! I'm here to help you create a professional contract. What type of agreement are you looking to create today?",
+    },
+  ])
+  const [chatInput, setChatInput] = useState("")
+  const [isChatLoading, setIsChatLoading] = useState(false)
 
-    // Auto-send template prompt if coming from a template
-    if (template) {
-      setTimeout(() => {
-        handleSendMessage(template.prompt, false)
-      }, 1000)
-    }
-  }, [templateId])
+  const totalSteps = 4
+  const progress = (currentStep / totalSteps) * 100
 
+  // Set default title when contract type changes
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (contractData.type && !contractData.title) {
+      const selectedType = contractTypes.find((t) => t.value === contractData.type)
+      if (selectedType) {
+        setContractData((prev) => ({
+          ...prev,
+          title: selectedType.label,
+        }))
+      }
+    }
+  }, [contractData.type])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  const updateContractData = (field: keyof ContractData, value: any) => {
+    setContractData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSendMessage = async (message?: string, addToMessages = true) => {
-    const messageToSend = message || inputMessage.trim()
-    if (!messageToSend || isLoading) return
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: messageToSend,
-      timestamp: new Date(),
+  const nextStep = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
     }
+  }
 
-    if (addToMessages) {
-      setMessages((prev) => [...prev, userMessage])
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
     }
-    setInputMessage("")
-    setIsLoading(true)
+  }
 
+  const validateCurrentStep = () => {
+    switch (currentStep) {
+      case 1:
+        return contractData.type && contractData.title
+      case 2:
+        return contractData.counterparty_name && contractData.counterparty_email
+      case 3:
+        return contractData.start_date && contractData.terms
+      case 4:
+        return true
+      default:
+        return false
+    }
+  }
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: addToMessages ? [...messages, userMessage] : [...messages, userMessage],
-          context: "contract_wizard",
-          template: selectedTemplate?.name || null,
-        }),
-      })
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      if (!response.ok) {
-        throw new Error("Failed to get response")
+      const contractId = `contract-${Date.now()}`
+
+      // Store contract data in localStorage for demo purposes
+      const newContract = {
+        id: contractId,
+        ...contractData,
+        status: "draft",
+        created_at: new Date().toISOString(),
+        start_date: contractData.start_date?.toISOString(),
+        end_date: contractData.end_date?.toISOString(),
+        value: contractData.value ? Number.parseFloat(contractData.value) : undefined,
+        terms: `${contractData.terms}\n\nAdditional Terms:\n${contractData.additional_terms}`,
       }
 
-      const data = await response.json()
+      // Store in localStorage
+      const existingContracts = JSON.parse(localStorage.getItem("user_contracts") || "[]")
+      existingContracts.push(newContract)
+      localStorage.setItem("user_contracts", JSON.stringify(existingContracts))
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.message || "I apologize, but I couldn't generate a response. Please try again.",
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
+      toast.success("Contract created successfully!")
+      router.push(`/dashboard/contracts/${contractId}`)
     } catch (error) {
-      console.error("Error sending message:", error)
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "I'm sorry, I encountered an error. Please try again or contact support if the problem persists.",
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
-      toast.error("Failed to send message")
+      console.error("Error creating contract:", error)
+      toast.error("Failed to create contract. Please try again.")
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
-  const copyMessage = async (content: string) => {
+  const handleChatSubmit = async () => {
+    if (!chatInput.trim()) return
+
+    const userMessage = chatInput
+    setChatInput("")
+    setChatMessages((prev) => [...prev, { role: "user", content: userMessage }])
+    setIsChatLoading(true)
+
     try {
-      await navigator.clipboard.writeText(content)
-      toast.success("Message copied to clipboard!")
+      // Mock AI response based on contract type and user input
+      const contractTypeInfo = contractTypes.find((t) => t.value === contractData.type)
+      let aiResponse = ""
+
+      if (userMessage.toLowerCase().includes("management")) {
+        aiResponse =
+          "For artist management agreements, key terms typically include commission rates (10-20%), duration (1-3 years), and specific services like booking, marketing, and career development. The manager usually handles day-to-day business affairs while the artist focuses on creative work. Would you like me to help you determine a fair commission rate?"
+      } else if (userMessage.toLowerCase().includes("recording")) {
+        aiResponse =
+          "Recording contracts should specify studio time, production costs, ownership rights, and royalty splits. Typical advances range from $5,000-$50,000 for independent artists, with royalty rates between 10-15% of net receipts. The label usually owns the master recordings. What's your expected budget and royalty structure?"
+      } else if (userMessage.toLowerCase().includes("performance")) {
+        aiResponse =
+          "Performance agreements need to cover venue details, technical requirements, payment terms, and cancellation policies. Standard payment is 50% deposit, 50% on completion. Make sure to include your technical rider for sound, lighting, and hospitality requirements. What type of venue is this for?"
+      } else if (userMessage.toLowerCase().includes("publishing")) {
+        aiResponse =
+          "Publishing deals involve either assignment or administration of your copyrights. Administration deals (10-20% fee) let you keep ownership, while assignment deals (50% ownership) often include advances. Consider territory, term length, and reversion rights. Are you looking for administration or assignment?"
+      } else if (userMessage.toLowerCase().includes("producer")) {
+        aiResponse =
+          "Producer agreements typically include an upfront fee plus 2-4 producer points (percentage of royalties). Make sure to specify deliverables, revision limits, and credit requirements. The producer usually gets credit as 'Produced by [Name]'. What's your budget for production?"
+      } else if (userMessage.toLowerCase().includes("collaboration")) {
+        aiResponse =
+          "Collaboration agreements should clearly define ownership splits (often 50/50), credit allocation, and decision-making processes. Consider how you'll handle future licensing, sync opportunities, and potential disputes. Will this be an equal partnership or does one artist have more creative control?"
+      } else {
+        aiResponse = `Great question about ${contractTypeInfo?.label || "your contract"}! ${contractTypeInfo?.description || "This type of agreement"} typically includes specific terms about responsibilities, compensation, and duration. 
+
+Key considerations for this contract type:
+• Clear definition of roles and responsibilities
+• Fair compensation structure
+• Reasonable term length with renewal options
+• Termination clauses that protect both parties
+
+What specific aspect would you like to focus on first?`
+      }
+
+      setTimeout(() => {
+        setChatMessages((prev) => [...prev, { role: "assistant", content: aiResponse }])
+        setIsChatLoading(false)
+      }, 1000)
     } catch (error) {
-      toast.error("Failed to copy message")
+      console.error("Chat error:", error)
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "I apologize, but I'm having trouble responding right now. Please try again." },
+      ])
+      setIsChatLoading(false)
     }
+  }
+
+  const generateContractPreview = () => {
+    const contractTypeInfo = contractTypes.find((t) => t.value === contractData.type)
+    return `
+${contractData.title || "Contract Title"}
+
+This ${contractTypeInfo?.label || "Agreement"} is entered into between:
+
+Party A: [Your Name/Company]
+Party B: ${contractData.counterparty_name || "[Counterparty Name]"}
+Email: ${contractData.counterparty_email || "[Email Address]"}
+
+Effective Date: ${contractData.start_date ? format(contractData.start_date, "MMMM d, yyyy") : "[Start Date]"}
+${contractData.end_date ? `End Date: ${format(contractData.end_date, "MMMM d, yyyy")}` : ""}
+
+${contractData.value ? `Contract Value: ${contractData.currency} ${contractData.value}` : ""}
+
+TERMS AND CONDITIONS:
+${contractData.terms || "[Contract terms will be specified here]"}
+
+${contractData.additional_terms ? `ADDITIONAL TERMS:\n${contractData.additional_terms}` : ""}
+
+This agreement shall be governed by applicable laws and regulations.
+
+Signatures:
+_________________    _________________
+Party A              Party B
+
+Date: ___________    Date: ___________
+    `.trim()
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success("Copied to clipboard!")
   }
 
   const downloadContract = () => {
-    const contractContent = messages
-      .filter((m) => m.role === "assistant")
-      .map((m) => m.content)
-      .join("\n\n")
-
-    const blob = new Blob([contractContent], { type: "text/plain" })
+    const content = generateContractPreview()
+    const blob = new Blob([content], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `contract-${selectedTemplate?.name.toLowerCase().replace(/\s+/g, "-") || "draft"}-${Date.now()}.txt`
+    a.download = `${contractData.title || "contract"}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -192,182 +293,343 @@ export default function ContractWizardPage() {
     toast.success("Contract downloaded!")
   }
 
-  const useSuggestedPrompt = (prompt: string) => {
-    setInputMessage(prompt)
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-4">
-          <Link href="/dashboard/contracts">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Contracts
-            </Button>
-          </Link>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <Bot className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Contract Wizard</h1>
-              <p className="text-muted-foreground">
-                {selectedTemplate ? `Creating: ${selectedTemplate.name}` : "AI-powered contract creation and guidance"}
-              </p>
-            </div>
+    <div className="container mx-auto py-6 max-w-4xl">
+      <div className="mb-6">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Contracts
+        </Button>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+            <Wand2 className="w-6 h-6 text-white" />
           </div>
-
-          {messages.length > 2 && (
-            <Button onClick={downloadContract} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Download Contract
-            </Button>
-          )}
+          <div>
+            <h1 className="text-3xl font-bold">Contract Wizard</h1>
+            <p className="text-muted-foreground">Create professional contracts with guided assistance</p>
+          </div>
         </div>
+      </div>
 
-        {selectedTemplate && (
-          <Card className="bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <FileText className="w-5 h-5 text-blue-600" />
+      <Tabs defaultValue="wizard" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="wizard">Step-by-Step Wizard</TabsTrigger>
+          <TabsTrigger value="chat">AI Chat Assistant</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="wizard" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-blue-900 dark:text-blue-100">{selectedTemplate.name}</p>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">{selectedTemplate.description}</p>
+                  <CardTitle>
+                    Step {currentStep} of {totalSteps}
+                  </CardTitle>
+                  <CardDescription>
+                    {currentStep === 1 && "Choose your contract type and basic information"}
+                    {currentStep === 2 && "Enter counterparty details"}
+                    {currentStep === 3 && "Define contract terms and duration"}
+                    {currentStep === 4 && "Review and finalize your contract"}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline">{Math.round(progress)}% Complete</Badge>
+              </div>
+              <Progress value={progress} className="w-full" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="type">Contract Type</Label>
+                    <Select value={contractData.type} onValueChange={(value) => updateContractData("type", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select contract type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contractTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            <div className="flex items-center gap-2">
+                              <span>{type.icon}</span>
+                              <div>
+                                <div className="font-medium">{type.label}</div>
+                                <div className="text-sm text-muted-foreground">{type.description}</div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="title">Contract Title</Label>
+                    <Input
+                      id="title"
+                      placeholder="e.g., Artist Management Agreement - John Doe"
+                      value={contractData.title}
+                      onChange={(e) => updateContractData("title", e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="counterparty_name">Counterparty Name</Label>
+                    <Input
+                      id="counterparty_name"
+                      placeholder="Full name or company name"
+                      value={contractData.counterparty_name}
+                      onChange={(e) => updateContractData("counterparty_name", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="counterparty_email">Counterparty Email</Label>
+                    <Input
+                      id="counterparty_email"
+                      type="email"
+                      placeholder="email@example.com"
+                      value={contractData.counterparty_email}
+                      onChange={(e) => updateContractData("counterparty_email", e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 3 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Start Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !contractData.start_date && "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {contractData.start_date ? format(contractData.start_date, "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={contractData.start_date}
+                            onSelect={(date) => updateContractData("start_date", date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div>
+                      <Label>End Date (Optional)</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !contractData.end_date && "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {contractData.end_date ? format(contractData.end_date, "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={contractData.end_date}
+                            onSelect={(date) => updateContractData("end_date", date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-2">
+                      <Label htmlFor="value">Contract Value (Optional)</Label>
+                      <Input
+                        id="value"
+                        type="number"
+                        placeholder="0.00"
+                        value={contractData.value}
+                        onChange={(e) => updateContractData("value", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="currency">Currency</Label>
+                      <Select
+                        value={contractData.currency}
+                        onValueChange={(value) => updateContractData("currency", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map((currency) => (
+                            <SelectItem key={currency} value={currency}>
+                              {currency}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="terms">Contract Terms</Label>
+                    <Textarea
+                      id="terms"
+                      placeholder="Describe the main terms, responsibilities, and conditions of this contract..."
+                      className="min-h-[120px]"
+                      value={contractData.terms}
+                      onChange={(e) => updateContractData("terms", e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 4 && (
+                <div className="space-y-6">
+                  <div>
+                    <Label htmlFor="additional_terms">Additional Terms (Optional)</Label>
+                    <Textarea
+                      id="additional_terms"
+                      placeholder="Add any additional clauses, special conditions, or notes..."
+                      className="min-h-[100px]"
+                      value={contractData.additional_terms}
+                      onChange={(e) => updateContractData("additional_terms", e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <Label>Contract Preview</Label>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(generateContractPreview())}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={downloadContract}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="bg-muted p-4 rounded-lg max-h-96 overflow-y-auto">
+                      <pre className="whitespace-pre-wrap text-sm font-mono">{generateContractPreview()}</pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between pt-6">
+                <Button variant="outline" onClick={prevStep} disabled={currentStep === 1}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+
+                {currentStep < totalSteps ? (
+                  <Button onClick={nextStep} disabled={!validateCurrentStep()}>
+                    Next
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button onClick={handleSubmit} disabled={isSubmitting || !validateCurrentStep()}>
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        Create Contract
+                        <CheckCircle className="h-4 w-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chat" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                AI Contract Assistant
+              </CardTitle>
+              <CardDescription>Chat with our AI to get personalized contract advice and assistance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto space-y-4">
+                  {chatMessages.map((message, index) => (
+                    <div key={index} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                      <div
+                        className={cn(
+                          "max-w-[80%] rounded-lg px-4 py-2",
+                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-background border",
+                        )}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-background border rounded-lg px-4 py-2">
+                        <p className="text-sm text-muted-foreground">AI is typing...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ask about contract terms, legal requirements, or get suggestions..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleChatSubmit()}
+                  />
+                  <Button onClick={handleChatSubmit} disabled={isChatLoading || !chatInput.trim()}>
+                    Send
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setChatInput("What should I include in a management contract?")}
+                  >
+                    Management Contract Tips
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setChatInput("How do I set fair royalty rates?")}>
+                    Royalty Rate Guidance
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setChatInput("What are standard contract durations?")}
+                  >
+                    Contract Duration
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setChatInput("Help me with termination clauses")}>
+                    Termination Clauses
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Chat Interface */}
-        <div className="lg:col-span-3">
-          <Card className="h-[600px] flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MessageSquare className="w-5 h-5" />
-                <span>Contract Assistant</span>
-              </CardTitle>
-              <CardDescription>Chat with our AI to create and customize your contract</CardDescription>
-            </CardHeader>
-
-            <CardContent className="flex-1 flex flex-col space-y-4">
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[80%] rounded-lg p-4 ${
-                        message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-start space-x-2">
-                        {message.role === "assistant" && <Bot className="w-5 h-5 mt-0.5 flex-shrink-0" />}
-                        {message.role === "user" && <User className="w-5 h-5 mt-0.5 flex-shrink-0" />}
-                        <div className="flex-1">
-                          <div className="prose prose-sm max-w-none">
-                            {message.content.split("\n").map((line, index) => (
-                              <p key={index} className="mb-2 last:mb-0">
-                                {line}
-                              </p>
-                            ))}
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs opacity-70">{message.timestamp.toLocaleTimeString()}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyMessage(message.content)}
-                              className="h-6 w-6 p-0 opacity-70 hover:opacity-100"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-4">
-                      <div className="flex items-center space-x-2">
-                        <Bot className="w-5 h-5" />
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Thinking...</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <div className="flex space-x-2">
-                <Input
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Ask about contract terms, request modifications, or get legal guidance..."
-                  onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                  disabled={isLoading}
-                />
-                <Button onClick={() => handleSendMessage()} disabled={!inputMessage.trim() || isLoading}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Suggested Prompts */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <Sparkles className="w-5 h-5" />
-                <span>Quick Starts</span>
-              </CardTitle>
-              <CardDescription>Click any prompt to get started</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {suggestedPrompts.map((prompt, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-left h-auto p-3 text-xs bg-transparent"
-                  onClick={() => setInputMessage(prompt)}
-                >
-                  {prompt}
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Tips */}
-          <Card className="bg-green-50 dark:bg-green-950/50 border-green-200 dark:border-green-800">
-            <CardHeader>
-              <CardTitle className="text-green-900 dark:text-green-100 text-lg">💡 Tips</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-green-800 dark:text-green-200">
-              <p>• Be specific about your situation and needs</p>
-              <p>• Ask for explanations of legal terms</p>
-              <p>• Request modifications to standard clauses</p>
-              <p>• Always have contracts reviewed by a lawyer</p>
-              <p>• Save important conversations for reference</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
