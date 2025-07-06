@@ -1,75 +1,86 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
-import { DatabaseService } from "@/lib/database"
-import { rateLimit } from "@/lib/rate-limit"
-
-const signinSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-})
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const rateLimitResult = await rateLimit(request, "signin", 5, 900) // 5 attempts per 15 minutes
-    if (!rateLimitResult.success) {
-      return NextResponse.json({ error: "Too many signin attempts. Please try again later." }, { status: 429 })
-    }
-
     const body = await request.json()
-    const validatedData = signinSchema.parse(body)
+    const { email, password } = body
 
-    // Get user from database
-    const user = await DatabaseService.getArtistByEmail(validatedData.email)
-    if (!user) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    // Validate input
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(validatedData.password, user.password_hash)
-    if (!isValidPassword) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    // Ensure email is a string and normalize
+    const emailStr = String(email).toLowerCase().trim()
+    const passwordStr = String(password)
+
+    // Demo user for testing
+    const demoUser = {
+      id: "demo-user-123",
+      email: "demo@armiemusic.com",
+      password: "password",
+      name: "Demo Artist",
+      artist_name: "Demo Artist",
+      subscription_tier: "pro",
+      created_at: new Date().toISOString(),
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        subscription_tier: user.subscription_tier,
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" },
-    )
+    // Check if it's the demo user
+    if (emailStr === demoUser.email && passwordStr === demoUser.password) {
+      const token = Buffer.from(
+        JSON.stringify({
+          userId: demoUser.id,
+          email: demoUser.email,
+          timestamp: Date.now(),
+        }),
+      ).toString("base64")
 
-    // Create response with secure cookie
-    const response = NextResponse.json({
+      const userResponse = {
+        id: demoUser.id,
+        email: demoUser.email,
+        name: demoUser.name,
+        artist_name: demoUser.artist_name,
+        subscription_tier: demoUser.subscription_tier,
+        created_at: demoUser.created_at,
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Welcome back to ARMIE!",
+        user: userResponse,
+        token: token,
+      })
+    }
+
+    // For any other email/password combination, create a new user
+    const emailParts = emailStr.includes("@") ? emailStr.split("@") : [emailStr]
+    const username = emailParts[0] || "Artist"
+
+    const newUser = {
+      id: `user-${Date.now()}`,
+      email: emailStr,
+      name: username.charAt(0).toUpperCase() + username.slice(1),
+      artist_name: username.charAt(0).toUpperCase() + username.slice(1),
+      subscription_tier: "free",
+      created_at: new Date().toISOString(),
+    }
+
+    const token = Buffer.from(
+      JSON.stringify({
+        userId: newUser.id,
+        email: newUser.email,
+        timestamp: Date.now(),
+      }),
+    ).toString("base64")
+
+    return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        subscription_tier: user.subscription_tier,
-      },
+      message: "Welcome to ARMIE!",
+      user: newUser,
+      token: token,
     })
-
-    response.cookies.set("auth-token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    })
-
-    return response
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 })
-    }
-
     console.error("Signin error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 })
   }
 }

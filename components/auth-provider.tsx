@@ -1,128 +1,138 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { getStackConfig } from "@/lib/stack-config"
 
 interface User {
   id: string
-  name: string
   email: string
-  avatar?: string
-  signedIn: boolean
+  name: string
+  artist_name?: string
+  subscription_tier: string
 }
 
 interface AuthContextType {
   user: User | null
-  isLoading: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (name: string, email: string, password: string) => Promise<void>
-  signOut: () => void
+  loading: boolean
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+    artistName?: string,
+  ) => Promise<{ success: boolean; error?: string }>
+  signOut: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
-  const pathname = usePathname()
+  const [loading, setLoading] = useState(true)
+  const [stackConfig, setStackConfig] = useState<any>(null)
 
   useEffect(() => {
-    // Check for existing user session
-    const checkAuth = async () => {
-      try {
-        const storedUser = localStorage.getItem("armie_user")
-        if (storedUser) {
-          const userData = JSON.parse(storedUser)
-          setUser(userData)
-        }
-      } catch (error) {
-        console.error("Error checking auth:", error)
-        localStorage.removeItem("armie_user")
-      } finally {
-        setIsLoading(false)
-      }
-    }
+    // Load Stack configuration
+    getStackConfig().then(setStackConfig)
 
+    // Check if user is already authenticated
     checkAuth()
   }, [])
 
+  const checkAuth = async () => {
+    try {
+      const response = await fetch("/api/auth/me", {
+        credentials: "include",
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData.user)
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const signIn = async (email: string, password: string) => {
-    setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      })
 
-      const userData: User = {
-        id: "user-" + Date.now(),
-        name: email
-          .split("@")[0]
-          .replace(/[^a-zA-Z]/g, " ")
-          .replace(/\b\w/g, (l) => l.toUpperCase()),
-        email,
-        avatar: "/placeholder-user.jpg",
-        signedIn: true,
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setUser(data.user)
+        return { success: true }
+      } else {
+        return { success: false, error: data.error || "Sign in failed" }
       }
-
-      setUser(userData)
-      localStorage.setItem("armie_user", JSON.stringify(userData))
-      router.push("/dashboard")
     } catch (error) {
-      throw new Error("Sign in failed")
-    } finally {
-      setIsLoading(false)
+      console.error("Sign in error:", error)
+      return { success: false, error: "Network error occurred" }
     }
   }
 
-  const signUp = async (name: string, email: string, password: string) => {
-    setIsLoading(true)
+  const signUp = async (email: string, password: string, name: string, artistName?: string) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, name, artist_name: artistName }),
+        credentials: "include",
+      })
 
-      const userData: User = {
-        id: "user-" + Date.now(),
-        name,
-        email,
-        avatar: "/placeholder-user.jpg",
-        signedIn: true,
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setUser(data.user)
+        return { success: true }
+      } else {
+        return { success: false, error: data.error || "Sign up failed" }
       }
-
-      setUser(userData)
-      localStorage.setItem("armie_user", JSON.stringify(userData))
-      router.push("/dashboard")
     } catch (error) {
-      throw new Error("Sign up failed")
-    } finally {
-      setIsLoading(false)
+      console.error("Sign up error:", error)
+      return { success: false, error: "Network error occurred" }
     }
   }
 
-  const signOut = () => {
-    setUser(null)
-    localStorage.removeItem("armie_user")
-    router.push("/landing")
+  const signOut = async () => {
+    try {
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        credentials: "include",
+      })
+      setUser(null)
+    } catch (error) {
+      console.error("Sign out error:", error)
+    }
   }
 
-  // Redirect logic for protected routes
-  useEffect(() => {
-    if (!isLoading) {
-      const isAuthPage = pathname?.startsWith("/auth/")
-      const isLandingPage = pathname === "/landing"
-      const isPublicPage = isAuthPage || isLandingPage || pathname === "/"
+  const refreshUser = async () => {
+    await checkAuth()
+  }
 
-      if (!user?.signedIn && !isPublicPage) {
-        // Redirect unauthenticated users to landing page
-        router.replace("/landing")
-      } else if (user?.signedIn && (isAuthPage || pathname === "/" || isLandingPage)) {
-        // Redirect authenticated users to main dashboard
-        router.replace("/dashboard")
-      }
-    }
-  }, [user, isLoading, pathname, router])
+  const value = {
+    user,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    refreshUser,
+  }
 
-  return <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

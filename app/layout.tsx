@@ -4,13 +4,15 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Armie - AI Music Career Assistant",
-  description: "Your intelligent companion for music career success",
+  title: "ARMIE - AI-Powered Artist Management",
+  description:
+    "The future of artist management with AI-powered tools for contracts, marketing, and career development.",
+  keywords: ["artist management", "AI", "music industry", "contracts", "marketing"],
     generator: 'v0.dev'
 }
 
@@ -22,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             {children}
             <Toaster />

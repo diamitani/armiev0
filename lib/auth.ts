@@ -1,60 +1,165 @@
-import type { NextRequest } from "next/server"
-import jwt from "jsonwebtoken"
+import { jwtVerify, SignJWT } from "jose"
+import bcrypt from "bcryptjs"
+import { DatabaseService } from "./database"
+import { cookies } from "next/headers"
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key")
 
 export interface AuthUser {
-  userId: string
+  id: string
   email: string
+  name: string
+  artist_name?: string
   subscription_tier: string
 }
 
-export interface AuthResult {
-  success: boolean
-  user?: AuthUser
-  error?: string
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12)
 }
 
-export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  return bcrypt.compare(password, hashedPassword)
+}
+
+export async function createToken(user: AuthUser): Promise<string> {
+  return new SignJWT({
+    sub: user.id,
+    email: user.email,
+    name: user.name,
+    artist_name: user.artist_name,
+    subscription_tier: user.subscription_tier,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(JWT_SECRET)
+}
+
+export async function verifyToken(token: string): Promise<AuthUser | null> {
   try {
-    // Get token from cookie or Authorization header
-    let token = request.cookies.get("auth-token")?.value
-
-    if (!token) {
-      const authHeader = request.headers.get("Authorization")
-      if (authHeader?.startsWith("Bearer ")) {
-        token = authHeader.substring(7)
-      }
-    }
-
-    if (!token) {
-      return { success: false, error: "No token provided" }
-    }
-
-    // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
-
+    const { payload } = await jwtVerify(token, JWT_SECRET)
     return {
-      success: true,
-      user: {
-        userId: decoded.userId,
-        email: decoded.email,
-        subscription_tier: decoded.subscription_tier,
-      },
+      id: payload.sub as string,
+      email: payload.email as string,
+      name: payload.name as string,
+      artist_name: payload.artist_name as string,
+      subscription_tier: payload.subscription_tier as string,
     }
-  } catch (error) {
-    console.error("Auth verification error:", error)
-    return { success: false, error: "Invalid token" }
+  } catch {
+    return null
   }
 }
 
-export function requireAuth(handler: Function) {
-  return async (request: NextRequest, ...args: any[]) => {
-    const authResult = await verifyAuth(request)
-    if (!authResult.success) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      })
+export async function verifyAuth(): Promise<AuthUser | null> {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get("auth-token")?.value
+
+    if (!token) {
+      return null
     }
-    return handler(request, ...args, authResult.user)
+
+    return await verifyToken(token)
+  } catch {
+    return null
   }
+}
+
+export async function createUser(data: {
+  email: string
+  password: string
+  name: string
+  artist_name?: string
+}): Promise<AuthUser> {
+  const passwordHash = await hashPassword(data.password)
+
+  const user = await DatabaseService.createUser({
+    email: data.email,
+    password_hash: passwordHash,
+    name: data.name,
+    artist_name: data.artist_name,
+  })
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    artist_name: user.artist_name,
+    subscription_tier: user.subscription_tier,
+  }
+}
+
+export async function createOAuthUser(data: {
+  email: string
+  name: string
+  provider: string
+  provider_id: string
+  artist_name?: string
+}): Promise<AuthUser> {
+  const user = await DatabaseService.createUser({
+    email: data.email,
+    name: data.name,
+    artist_name: data.artist_name,
+    oauth_provider: data.provider,
+    oauth_id: data.provider_id,
+  })
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    artist_name: user.artist_name,
+    subscription_tier: user.subscription_tier,
+  }
+}
+
+export async function authenticateUser(email: string, password: string): Promise<AuthUser | null> {
+  const user = await DatabaseService.getUserByEmail(email)
+
+  if (!user || !user.password_hash) {
+    return null
+  }
+
+  const isValid = await verifyPassword(password, user.password_hash)
+
+  if (!isValid) {
+    return null
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    artist_name: user.artist_name,
+    subscription_tier: user.subscription_tier,
+  }
+}
+
+export async function authenticateOAuthUser(
+  email: string,
+  provider: string,
+  provider_id: string,
+): Promise<AuthUser | null> {
+  const user = await DatabaseService.getUserByOAuth(provider, provider_id)
+
+  if (!user) {
+    return null
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    artist_name: user.artist_name,
+    subscription_tier: user.subscription_tier,
+  }
+}
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  return await verifyAuth()
+}
+
+export async function signOut(): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.delete("auth-token")
 }

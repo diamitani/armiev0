@@ -1,69 +1,63 @@
-import type { NextRequest } from "next/server"
-
-interface RateLimitResult {
-  success: boolean
-  remaining?: number
-  resetTime?: number
+interface RateLimitStore {
+  [key: string]: {
+    count: number
+    resetTime: number
+  }
 }
 
-// In-memory store for rate limiting (use Redis in production)
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
+const store: RateLimitStore = {}
 
 export async function rateLimit(
-  request: NextRequest,
+  request: Request,
   identifier: string,
-  maxRequests: number,
+  limit: number,
   windowMs: number,
-): Promise<RateLimitResult> {
-  try {
-    // Get client IP
-    const ip =
-      request.ip ||
-      request.headers.get("x-forwarded-for")?.split(",")[0] ||
-      request.headers.get("x-real-ip") ||
-      "unknown"
+): Promise<{ success: boolean; limit: number; remaining: number; reset: number }> {
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+  const key = `${identifier}:${ip}`
+  const now = Date.now()
 
-    const key = `${identifier}:${ip}`
-    const now = Date.now()
-    const windowStart = now - windowMs * 1000
-
-    // Clean up expired entries
-    for (const [k, v] of rateLimitStore.entries()) {
-      if (v.resetTime < now) {
-        rateLimitStore.delete(k)
-      }
+  // Clean up expired entries
+  Object.keys(store).forEach((k) => {
+    if (store[k].resetTime < now) {
+      delete store[k]
     }
+  })
 
-    const current = rateLimitStore.get(key)
+  const current = store[key]
 
-    if (!current || current.resetTime < now) {
-      // First request or window expired
-      rateLimitStore.set(key, {
-        count: 1,
-        resetTime: now + windowMs * 1000,
-      })
-      return { success: true, remaining: maxRequests - 1 }
+  if (!current || current.resetTime < now) {
+    // First request or window expired
+    store[key] = {
+      count: 1,
+      resetTime: now + windowMs * 1000,
     }
-
-    if (current.count >= maxRequests) {
-      return {
-        success: false,
-        remaining: 0,
-        resetTime: current.resetTime,
-      }
-    }
-
-    // Increment counter
-    current.count++
-    rateLimitStore.set(key, current)
 
     return {
       success: true,
-      remaining: maxRequests - current.count,
+      limit,
+      remaining: limit - 1,
+      reset: store[key].resetTime,
     }
-  } catch (error) {
-    console.error("Rate limit error:", error)
-    // Allow request on error
-    return { success: true }
+  }
+
+  if (current.count >= limit) {
+    // Rate limit exceeded
+    return {
+      success: false,
+      limit,
+      remaining: 0,
+      reset: current.resetTime,
+    }
+  }
+
+  // Increment counter
+  current.count++
+
+  return {
+    success: true,
+    limit,
+    remaining: limit - current.count,
+    reset: current.resetTime,
   }
 }

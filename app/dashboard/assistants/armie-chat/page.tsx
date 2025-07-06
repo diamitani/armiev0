@@ -1,36 +1,33 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { useChat } from "ai/react"
+import type React from "react"
+
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/components/auth-provider"
 import { Bot, Send, Loader2, Plus, Download, Share2, Settings, Mic, Paperclip, Star, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 
+interface Message {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  createdAt: Date
+}
+
 export default function ArmieChat() {
-  const { user } = useAuth()
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages } = useChat({
-    api: "/api/chat",
-    body: {
-      assistantType: "armie",
-    },
-    onError: (error) => {
-      console.error("Chat error:", error)
-      toast.error("Failed to send message. Please try again.")
-    },
-  })
-
   useEffect(() => {
-    // Initialize with welcome message if no messages
-    if (messages.length === 0) {
-      const welcomeContent = `🎵 Welcome to your dedicated ARMIE chat session! I'm your comprehensive AI music career development assistant.
+    // Initialize with welcome message
+    const welcomeContent = `🎵 Welcome to your dedicated ARMIE chat session! I'm your comprehensive AI music career development assistant.
 
 **What I can help you with today:**
 
@@ -61,16 +58,15 @@ export default function ArmieChat() {
 
 What specific aspect of your music career would you like to focus on? I'm here to provide detailed, actionable guidance! 🎯`
 
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          content: welcomeContent,
-          createdAt: new Date(),
-        },
-      ])
-    }
-  }, [setMessages])
+    setMessages([
+      {
+        id: "welcome",
+        role: "assistant",
+        content: welcomeContent,
+        createdAt: new Date(),
+      },
+    ])
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
@@ -78,6 +74,97 @@ What specific aspect of your music career would you like to focus on? I'm here t
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input,
+      createdAt: new Date(),
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setInput("")
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [userMessage],
+          assistantType: "armie",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body")
+      }
+
+      let assistantContent = ""
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "",
+        createdAt: new Date(),
+      }
+
+      setMessages((prev) => [...prev, assistantMessage])
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = new TextDecoder().decode(value)
+        const lines = chunk.split("\n")
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6)
+            if (data === "[DONE]") {
+              setIsLoading(false)
+              return
+            }
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.content) {
+                assistantContent += parsed.content
+                setMessages((prev) =>
+                  prev.map((msg) => (msg.id === assistantMessage.id ? { ...msg, content: assistantContent } : msg)),
+                )
+              }
+            } catch (e) {
+              // Ignore parsing errors for streaming
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error)
+      toast.error("Failed to send message. Please try again.")
+
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "I apologize, but I'm having trouble responding right now. Please try again in a moment.",
+        createdAt: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const formatTime = (date: Date) => {
@@ -114,6 +201,17 @@ What specific aspect of your music career would you like to focus on? I'm here t
       navigator.clipboard.writeText(window.location.href)
       toast.success("Chat link copied to clipboard!")
     }
+  }
+
+  const startNewChat = () => {
+    setMessages([
+      {
+        id: "welcome-new",
+        role: "assistant",
+        content: `🎵 Hi there! I'm ARMIE, ready to help with your music career. What would you like to work on?`,
+        createdAt: new Date(),
+      },
+    ])
   }
 
   return (
@@ -175,16 +273,7 @@ What specific aspect of your music career would you like to focus on? I'm here t
               >
                 <Avatar className="w-10 h-10 flex-shrink-0">
                   {message.role === "user" ? (
-                    <>
-                      <AvatarImage src={user?.avatar || "/placeholder-user.jpg"} />
-                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
-                        {user?.name
-                          ?.split(" ")
-                          .map((n: string) => n[0])
-                          .join("")
-                          .toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </>
+                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">U</AvatarFallback>
                   ) : (
                     <AvatarFallback className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white">
                       <Bot className="w-5 h-5" />
@@ -193,12 +282,8 @@ What specific aspect of your music career would you like to focus on? I'm here t
                 </Avatar>
                 <div className={`flex-1 max-w-[80%] ${message.role === "user" ? "text-right" : ""}`}>
                   <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-sm font-medium">
-                      {message.role === "user" ? user?.name || "You" : "ARMIE"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {message.createdAt ? formatTime(message.createdAt) : formatTime(new Date())}
-                    </span>
+                    <span className="text-sm font-medium">{message.role === "user" ? "You" : "ARMIE"}</span>
+                    <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
                   </div>
                   <div
                     className={`rounded-2xl px-6 py-4 shadow-sm ${
@@ -245,7 +330,7 @@ What specific aspect of your music career would you like to focus on? I'm here t
               <div className="flex-1">
                 <Input
                   value={input}
-                  onChange={handleInputChange}
+                  onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask ARMIE about your music career strategy, business development, marketing, contracts, or any industry question..."
                   disabled={isLoading}
                   className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500 text-base min-h-[2.5rem] resize-none"
@@ -269,7 +354,6 @@ What specific aspect of your music career would you like to focus on? I'm here t
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </Button>
             </div>
-            {error && <p className="text-sm text-red-500 px-3">Error: {error.message}</p>}
             <div className="flex items-center justify-between px-3">
               <p className="text-xs text-gray-500">
                 ARMIE has comprehensive knowledge of the music industry, business development, and career strategy
@@ -280,17 +364,7 @@ What specific aspect of your music career would you like to focus on? I'm here t
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs text-gray-500 hover:text-gray-700"
-                  onClick={() => {
-                    setMessages([])
-                    setMessages([
-                      {
-                        id: "welcome-new",
-                        role: "assistant",
-                        content: `🎵 Hi ${user?.name || "there"}! I'm ARMIE, ready to help with your music career. What would you like to work on?`,
-                        createdAt: new Date(),
-                      },
-                    ])
-                  }}
+                  onClick={startNewChat}
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   New Chat

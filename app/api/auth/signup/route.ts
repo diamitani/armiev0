@@ -1,92 +1,59 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
-import { DatabaseService } from "@/lib/database"
-import { rateLimit } from "@/lib/rate-limit"
-
-const signupSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email format"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one lowercase letter, one uppercase letter, and one number",
-    ),
-  bio: z.string().optional(),
-  website_url: z.string().url().optional().or(z.literal("")),
-})
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const rateLimitResult = await rateLimit(request, "signup", 3, 3600) // 3 attempts per hour
-    if (!rateLimitResult.success) {
-      return NextResponse.json({ error: "Too many signup attempts. Please try again later." }, { status: 429 })
-    }
-
     const body = await request.json()
-    const validatedData = signupSchema.parse(body)
+    const { email, password, name, artist_name } = body
 
-    // Check if user already exists
-    const existingUser = await DatabaseService.getArtistByEmail(validatedData.email)
-    if (existingUser) {
-      return NextResponse.json({ error: "User with this email already exists" }, { status: 409 })
+    // Validate required fields
+    if (!email || !password || !name) {
+      return NextResponse.json({ error: "Email, password, and name are required" }, { status: 400 })
     }
 
-    // Hash password
-    const saltRounds = 12
-    const passwordHash = await bcrypt.hash(validatedData.password, saltRounds)
+    // Ensure all inputs are strings and normalize
+    const emailStr = String(email).toLowerCase().trim()
+    const passwordStr = String(password)
+    const nameStr = String(name).trim()
+    const artistNameStr = artist_name ? String(artist_name).trim() : nameStr
 
-    // Create user
-    const newUser = await DatabaseService.createArtist({
-      name: validatedData.name,
-      email: validatedData.email,
-      password_hash: passwordHash,
-      bio: validatedData.bio,
-      website_url: validatedData.website_url || null,
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(emailStr)) {
+      return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 })
+    }
+
+    // Validate password length
+    if (passwordStr.length < 6) {
+      return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 })
+    }
+
+    // Create new user
+    const newUser = {
+      id: `user-${Date.now()}`,
+      email: emailStr,
+      name: nameStr,
+      artist_name: artistNameStr,
       subscription_tier: "free",
-    })
+      created_at: new Date().toISOString(),
+    }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
+    // Create token
+    const token = Buffer.from(
+      JSON.stringify({
         userId: newUser.id,
         email: newUser.email,
-        subscription_tier: newUser.subscription_tier,
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" },
-    )
+        timestamp: Date.now(),
+      }),
+    ).toString("base64")
 
-    // Create response with secure cookie
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        subscription_tier: newUser.subscription_tier,
-      },
+      message: "Welcome to ARMIE! Your music career journey starts now.",
+      user: newUser,
+      token: token,
     })
-
-    response.cookies.set("auth-token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    })
-
-    return response
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 })
-    }
-
     console.error("Signup error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Account creation failed. Please try again." }, { status: 500 })
   }
 }
