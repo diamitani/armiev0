@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import type React from "react"
+
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,601 +10,546 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, ArrowLeft, ArrowRight, MessageSquare, Download, Copy, CheckCircle, Wand2 } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { toast } from "sonner"
-import { generateText } from "ai" // Import generateText from AI SDK
-import { openai } from "@ai-sdk/openai" // Import openai model
-
-interface ContractData {
-  title: string
-  type: string
-  counterparty_name: string
-  counterparty_email: string
-  start_date: Date | undefined
-  end_date: Date | undefined
-  value: string
-  currency: string
-  terms: string
-  additional_terms: string
-}
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { ArrowLeft, ArrowRight, MessageSquare, Send, FileText, Download } from "lucide-react"
 
 const contractTypes = [
   {
-    value: "artist-management",
-    label: "Artist Management Agreement",
-    description: "Comprehensive management services contract",
-    icon: "👤",
+    id: "artist-management",
+    name: "Artist Management Agreement",
+    description: "Comprehensive management contract for artists",
   },
+  { id: "recording-contract", name: "Recording Contract", description: "Agreement for recording and releasing music" },
   {
-    value: "recording-contract",
-    label: "Recording Contract",
-    description: "Music recording and production agreement",
-    icon: "🎵",
+    id: "performance-booking",
+    name: "Performance Booking Agreement",
+    description: "Contract for live performances and shows",
   },
-  {
-    value: "publishing-deal",
-    label: "Music Publishing Agreement",
-    description: "Rights management and royalty distribution",
-    icon: "📝",
-  },
-  {
-    value: "producer-agreement",
-    label: "Producer Agreement",
-    description: "Music production services contract",
-    icon: "🎛️",
-  },
-  {
-    value: "performance-agreement",
-    label: "Performance Agreement",
-    description: "Live performance booking contract",
-    icon: "🎤",
-  },
-  {
-    value: "collaboration-agreement",
-    label: "Artist Collaboration Agreement",
-    description: "Joint creative project contract",
-    icon: "🤝",
-  },
+  { id: "producer-agreement", name: "Producer Agreement", description: "Agreement with music producers" },
+  { id: "licensing-deal", name: "Licensing Deal", description: "License music for various uses" },
+  { id: "distribution-deal", name: "Distribution Deal", description: "Agreement for music distribution" },
 ]
 
-const currencies = ["USD", "EUR", "GBP", "CAD", "AUD"]
-
-export default function ContractWizard() {
-  const router = useRouter()
+function ContractWizardContent() {
   const searchParams = useSearchParams()
-  const preselectedTemplate = searchParams.get("template")
+  const templateId = searchParams.get("template")
 
   const [currentStep, setCurrentStep] = useState(1)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [contractData, setContractData] = useState<ContractData>({
+  const [contractData, setContractData] = useState({
+    type: templateId || "",
     title: "",
-    type: preselectedTemplate || "",
-    counterparty_name: "",
-    counterparty_email: "",
-    start_date: undefined,
-    end_date: undefined,
-    value: "",
-    currency: "USD",
-    terms: "",
-    additional_terms: "",
+    parties: {
+      party1: { name: "", role: "", address: "", email: "" },
+      party2: { name: "", role: "", address: "", email: "" },
+    },
+    terms: {
+      duration: "",
+      compensation: "",
+      responsibilities: "",
+      termination: "",
+      additionalTerms: "",
+    },
   })
 
   const [chatMessages, setChatMessages] = useState([
     {
       role: "assistant",
-      content: preselectedTemplate
-        ? `Hi! I see you're creating a ${contractTypes.find((t) => t.value === preselectedTemplate)?.label}. I'm here to help you customize this contract with your specific details. What questions do you have about this type of agreement?`
-        : "Hi! I'm here to help you create a professional contract. What type of agreement are you looking to create today?",
+      content:
+        "Hello! I'm here to help you create your contract. What type of contract are you looking to create, and what specific questions do you have?",
     },
   ])
   const [chatInput, setChatInput] = useState("")
-  const [isChatLoading, setIsChatLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const totalSteps = 4
-  const progress = (currentStep / totalSteps) * 100
-
-  // Set default title when contract type changes
   useEffect(() => {
-    if (contractData.type && !contractData.title) {
-      const selectedType = contractTypes.find((t) => t.value === contractData.type)
-      if (selectedType) {
-        setContractData((prev) => ({
+    if (templateId) {
+      const template = contractTypes.find((t) => t.id === templateId)
+      if (template) {
+        setContractData((prev) => ({ ...prev, type: templateId, title: template.name }))
+      }
+    }
+  }, [templateId])
+
+  const handleInputChange = (field: string, value: string, nested?: string) => {
+    setContractData((prev) => {
+      if (nested) {
+        return {
           ...prev,
-          title: selectedType.label,
-        }))
+          [nested]: {
+            ...prev[nested as keyof typeof prev],
+            [field]: value,
+          },
+        }
       }
-    }
-  }, [contractData.type])
-
-  const updateContractData = (field: keyof ContractData, value: any) => {
-    setContractData((prev) => ({ ...prev, [field]: value }))
+      return { ...prev, [field]: value }
+    })
   }
 
-  const nextStep = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
-    }
+  const handlePartyChange = (party: "party1" | "party2", field: string, value: string) => {
+    setContractData((prev) => ({
+      ...prev,
+      parties: {
+        ...prev.parties,
+        [party]: {
+          ...prev.parties[party],
+          [field]: value,
+        },
+      },
+    }))
   }
 
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
+  const handleTermsChange = (field: string, value: string) => {
+    setContractData((prev) => ({
+      ...prev,
+      terms: {
+        ...prev.terms,
+        [field]: value,
+      },
+    }))
   }
 
-  const validateCurrentStep = () => {
-    switch (currentStep) {
-      case 1:
-        return contractData.type && contractData.title
-      case 2:
-        return contractData.counterparty_name && contractData.counterparty_email
-      case 3:
-        return contractData.start_date && contractData.terms
-      case 4:
-        return true
-      default:
-        return false
-    }
-  }
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true)
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      const contractId = `contract-${Date.now()}`
-
-      // Store contract data in localStorage for demo purposes
-      const newContract = {
-        id: contractId,
-        ...contractData,
-        status: "draft",
-        created_at: new Date().toISOString(),
-        start_date: contractData.start_date?.toISOString(),
-        end_date: contractData.end_date?.toISOString(),
-        value: contractData.value ? Number.parseFloat(contractData.value) : undefined,
-        terms: `${contractData.terms}\n\nAdditional Terms:\n${contractData.additional_terms}`,
-      }
-
-      // Store in localStorage
-      const existingContracts = JSON.parse(localStorage.getItem("user_contracts") || "[]")
-      existingContracts.push(newContract)
-      localStorage.setItem("user_contracts", JSON.stringify(existingContracts))
-
-      toast.success("Contract created successfully!")
-      router.push(`/dashboard/contracts/${contractId}`)
-    } catch (error) {
-      console.error("Error creating contract:", error)
-      toast.error("Failed to create contract. Please try again.")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleChatSubmit = async () => {
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!chatInput.trim()) return
 
-    const userMessage = chatInput
+    const userMessage = { role: "user", content: chatInput }
+    setChatMessages((prev) => [...prev, userMessage])
     setChatInput("")
-    setChatMessages((prev) => [...prev, { role: "user", content: userMessage }])
-    setIsChatLoading(true)
+    setIsLoading(true)
 
     try {
-      const contractTypeInfo = contractTypes.find((t) => t.value === contractData.type)
-      const prompt = `You are an AI assistant specializing in music industry contracts. The user is currently working on a "${contractTypeInfo?.label || "general music contract"}". The user asked: "${userMessage}". Provide helpful, concise advice or information related to this contract type. If the question is general, provide general contract advice. Keep your response under 200 words.`
-
-      const { text } = await generateText({
-        model: openai("gpt-4o"), // Using OpenAI's gpt-4o model
-        prompt: prompt,
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: chatInput }),
       })
 
-      setChatMessages((prev) => [...prev, { role: "assistant", content: text }])
-      setIsChatLoading(false)
+      if (!response.ok) throw new Error("Failed to get response")
+
+      const data = await response.json()
+      setChatMessages((prev) => [...prev, { role: "assistant", content: data.message }])
     } catch (error) {
       console.error("Chat error:", error)
       setChatMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "I apologize, but I'm having trouble responding right now. Please try again." },
+        {
+          role: "assistant",
+          content: "I apologize, but I encountered an error. Please try again.",
+        },
       ])
-      setIsChatLoading(false)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const generateContractPreview = () => {
-    const contractTypeInfo = contractTypes.find((t) => t.value === contractData.type)
+  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4))
+  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1))
+
+  const generateContract = () => {
+    const selectedType = contractTypes.find((t) => t.id === contractData.type)
     return `
-${contractData.title || "Contract Title"}
+# ${contractData.title || selectedType?.name || "Contract"}
 
-This ${contractTypeInfo?.label || "Agreement"} is entered into between:
+## Parties
+**${contractData.parties.party1.role || "Party 1"}:** ${contractData.parties.party1.name}
+Address: ${contractData.parties.party1.address}
+Email: ${contractData.parties.party1.email}
 
-Party A: [Your Name/Company]
-Party B: ${contractData.counterparty_name || "[Counterparty Name]"}
-Email: ${contractData.counterparty_email || "[Email Address]"}
+**${contractData.parties.party2.role || "Party 2"}:** ${contractData.parties.party2.name}
+Address: ${contractData.parties.party2.address}
+Email: ${contractData.parties.party2.email}
 
-Effective Date: ${contractData.start_date ? format(contractData.start_date, "MMMM d, yyyy") : "[Start Date]"}
-${contractData.end_date ? `End Date: ${format(contractData.end_date, "MMMM d, yyyy")}` : ""}
+## Terms and Conditions
 
-${contractData.value ? `Contract Value: ${contractData.currency} ${contractData.value}` : ""}
+### Duration
+${contractData.terms.duration || "To be specified"}
 
-TERMS AND CONDITIONS:
-${contractData.terms || "[Contract terms will be specified here]"}
+### Compensation
+${contractData.terms.compensation || "To be specified"}
 
-${contractData.additional_terms ? `ADDITIONAL TERMS:\n${contractData.additional_terms}` : ""}
+### Responsibilities
+${contractData.terms.responsibilities || "To be specified"}
 
-This agreement shall be governed by applicable laws and regulations.
+### Termination
+${contractData.terms.termination || "To be specified"}
 
-Signatures:
-_________________    _________________
-Party A              Party B
+### Additional Terms
+${contractData.terms.additionalTerms || "None specified"}
 
-Date: ___________    Date: ___________
+---
+*This contract was generated using ARMIE Contract Wizard. Please review with legal counsel before signing.*
     `.trim()
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success("Copied to clipboard!")
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="contract-type">Contract Type</Label>
+              <Select value={contractData.type} onValueChange={(value) => handleInputChange("type", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a contract type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contractTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      <div>
+                        <div className="font-medium">{type.name}</div>
+                        <div className="text-sm text-muted-foreground">{type.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="contract-title">Contract Title</Label>
+              <Input
+                id="contract-title"
+                value={contractData.title}
+                onChange={(e) => handleInputChange("title", e.target.value)}
+                placeholder="Enter a custom title for your contract"
+              />
+            </div>
+          </div>
+        )
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Party 1</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Name</Label>
+                    <Input
+                      value={contractData.parties.party1.name}
+                      onChange={(e) => handlePartyChange("party1", "name", e.target.value)}
+                      placeholder="Full name or company name"
+                    />
+                  </div>
+                  <div>
+                    <Label>Role</Label>
+                    <Input
+                      value={contractData.parties.party1.role}
+                      onChange={(e) => handlePartyChange("party1", "role", e.target.value)}
+                      placeholder="e.g., Artist, Manager, Producer"
+                    />
+                  </div>
+                  <div>
+                    <Label>Address</Label>
+                    <Textarea
+                      value={contractData.parties.party1.address}
+                      onChange={(e) => handlePartyChange("party1", "address", e.target.value)}
+                      placeholder="Full address"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={contractData.parties.party1.email}
+                      onChange={(e) => handlePartyChange("party1", "email", e.target.value)}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Party 2</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Name</Label>
+                    <Input
+                      value={contractData.parties.party2.name}
+                      onChange={(e) => handlePartyChange("party2", "name", e.target.value)}
+                      placeholder="Full name or company name"
+                    />
+                  </div>
+                  <div>
+                    <Label>Role</Label>
+                    <Input
+                      value={contractData.parties.party2.role}
+                      onChange={(e) => handlePartyChange("party2", "role", e.target.value)}
+                      placeholder="e.g., Artist, Manager, Producer"
+                    />
+                  </div>
+                  <div>
+                    <Label>Address</Label>
+                    <Textarea
+                      value={contractData.parties.party2.address}
+                      onChange={(e) => handlePartyChange("party2", "address", e.target.value)}
+                      placeholder="Full address"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={contractData.parties.party2.email}
+                      onChange={(e) => handlePartyChange("party2", "email", e.target.value)}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div>
+              <Label>Contract Duration</Label>
+              <Input
+                value={contractData.terms.duration}
+                onChange={(e) => handleTermsChange("duration", e.target.value)}
+                placeholder="e.g., 2 years, 6 months, indefinite"
+              />
+            </div>
+
+            <div>
+              <Label>Compensation</Label>
+              <Textarea
+                value={contractData.terms.compensation}
+                onChange={(e) => handleTermsChange("compensation", e.target.value)}
+                placeholder="Describe payment terms, percentages, fees, etc."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>Responsibilities</Label>
+              <Textarea
+                value={contractData.terms.responsibilities}
+                onChange={(e) => handleTermsChange("responsibilities", e.target.value)}
+                placeholder="Outline the responsibilities of each party"
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <Label>Termination Conditions</Label>
+              <Textarea
+                value={contractData.terms.termination}
+                onChange={(e) => handleTermsChange("termination", e.target.value)}
+                placeholder="Conditions under which the contract can be terminated"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>Additional Terms</Label>
+              <Textarea
+                value={contractData.terms.additionalTerms}
+                onChange={(e) => handleTermsChange("additionalTerms", e.target.value)}
+                placeholder="Any additional clauses or special conditions"
+                rows={4}
+              />
+            </div>
+          </div>
+        )
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Contract Preview
+                </CardTitle>
+                <CardDescription>Review your contract before finalizing</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-96 w-full border rounded-md p-4">
+                  <pre className="whitespace-pre-wrap text-sm">{generateContract()}</pre>
+                </ScrollArea>
+                <div className="flex gap-2 mt-4">
+                  <Button className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Download Contract
+                  </Button>
+                  <Button variant="outline">Save Draft</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+
+      default:
+        return null
+    }
   }
 
-  const downloadContract = () => {
-    const content = generateContractPreview()
-    const blob = new Blob([content], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${contractData.title || "contract"}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    toast.success("Contract downloaded!")
-  }
+  const stepTitles = ["Contract Type", "Parties Information", "Terms & Conditions", "Review & Finalize"]
 
   return (
-    <div className="container mx-auto py-6 max-w-4xl">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Contracts
-        </Button>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-            <Wand2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Contract Wizard</h1>
-            <p className="text-muted-foreground">Create professional contracts with guided assistance</p>
-          </div>
-        </div>
-      </div>
-
-      <Tabs defaultValue="wizard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="wizard">Step-by-Step Wizard</TabsTrigger>
-          <TabsTrigger value="chat">AI Chat Assistant</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="wizard" className="space-y-6">
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>
-                    Step {currentStep} of {totalSteps}
-                  </CardTitle>
+                  <CardTitle>Contract Wizard</CardTitle>
                   <CardDescription>
-                    {currentStep === 1 && "Choose your contract type and basic information"}
-                    {currentStep === 2 && "Enter counterparty details"}
-                    {currentStep === 3 && "Define contract terms and duration"}
-                    {currentStep === 4 && "Review and finalize your contract"}
+                    Step {currentStep} of 4: {stepTitles[currentStep - 1]}
                   </CardDescription>
                 </div>
-                <Badge variant="outline">{Math.round(progress)}% Complete</Badge>
+                <Badge variant="outline">
+                  {contractData.type ? contractTypes.find((t) => t.id === contractData.type)?.name : "No type selected"}
+                </Badge>
               </div>
-              <Progress value={progress} className="w-full" />
+
+              {/* Progress Bar */}
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(currentStep / 4) * 100}%` }}
+                />
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {currentStep === 1 && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="type">Contract Type</Label>
-                    <Select value={contractData.type} onValueChange={(value) => updateContractData("type", value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select contract type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contractTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            <div className="flex items-center gap-2">
-                              <span>{type.icon}</span>
-                              <div>
-                                <div className="font-medium">{type.label}</div>
-                                <div className="text-sm text-muted-foreground">{type.description}</div>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="title">Contract Title</Label>
-                    <Input
-                      id="title"
-                      placeholder="e.g., Artist Management Agreement - John Doe"
-                      value={contractData.title}
-                      onChange={(e) => updateContractData("title", e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
 
-              {currentStep === 2 && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="counterparty_name">Counterparty Name</Label>
-                    <Input
-                      id="counterparty_name"
-                      placeholder="Full name or company name"
-                      value={contractData.counterparty_name}
-                      onChange={(e) => updateContractData("counterparty_name", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="counterparty_email">Counterparty Email</Label>
-                    <Input
-                      id="counterparty_email"
-                      type="email"
-                      placeholder="email@example.com"
-                      value={contractData.counterparty_email}
-                      onChange={(e) => updateContractData("counterparty_email", e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
+            <CardContent>
+              {renderStep()}
 
-              {currentStep === 3 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Start Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !contractData.start_date && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {contractData.start_date ? format(contractData.start_date, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={contractData.start_date}
-                            onSelect={(date) => updateContractData("start_date", date)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div>
-                      <Label>End Date (Optional)</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !contractData.end_date && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {contractData.end_date ? format(contractData.end_date, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={contractData.end_date}
-                            onSelect={(date) => updateContractData("end_date", date)}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2">
-                      <Label htmlFor="value">Contract Value (Optional)</Label>
-                      <Input
-                        id="value"
-                        type="number"
-                        placeholder="0.00"
-                        value={contractData.value}
-                        onChange={(e) => updateContractData("value", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="currency">Currency</Label>
-                      <Select
-                        value={contractData.currency}
-                        onValueChange={(value) => updateContractData("currency", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currencies.map((currency) => (
-                            <SelectItem key={currency} value={currency}>
-                              {currency}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="terms">Contract Terms</Label>
-                    <Textarea
-                      id="terms"
-                      placeholder="Describe the main terms, responsibilities, and conditions of this contract..."
-                      className="min-h-[120px]"
-                      value={contractData.terms}
-                      onChange={(e) => updateContractData("terms", e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
+              <Separator className="my-6" />
 
-              {currentStep === 4 && (
-                <div className="space-y-6">
-                  <div>
-                    <Label htmlFor="additional_terms">Additional Terms (Optional)</Label>
-                    <Textarea
-                      id="additional_terms"
-                      placeholder="Add any additional clauses, special conditions, or notes..."
-                      className="min-h-[100px]"
-                      value={contractData.additional_terms}
-                      onChange={(e) => updateContractData("additional_terms", e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <Label>Contract Preview</Label>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(generateContractPreview())}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={downloadContract}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="bg-muted p-4 rounded-lg max-h-96 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-sm font-mono">{generateContractPreview()}</pre>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-between pt-6">
-                <Button variant="outline" onClick={prevStep} disabled={currentStep === 1}>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                  className="flex items-center gap-2 bg-transparent"
+                >
+                  <ArrowLeft className="h-4 w-4" />
                   Previous
                 </Button>
 
-                {currentStep < totalSteps ? (
-                  <Button onClick={nextStep} disabled={!validateCurrentStep()}>
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleSubmit} disabled={isSubmitting || !validateCurrentStep()}>
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        Create Contract
-                        <CheckCircle className="h-4 w-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                )}
+                <Button onClick={nextStep} disabled={currentStep === 4} className="flex items-center gap-2">
+                  Next
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="chat" className="space-y-6">
-          <Card>
+        {/* AI Assistant Chat */}
+        <div className="lg:col-span-1">
+          <Card className="h-fit">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                AI Contract Assistant
+                AI Assistant
               </CardTitle>
-              <CardDescription>Chat with our AI to get personalized contract advice and assistance</CardDescription>
+              <CardDescription>Get help with your contract</CardDescription>
             </CardHeader>
+
             <CardContent>
-              <div className="space-y-4">
-                <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto space-y-4">
+              <ScrollArea className="h-64 w-full border rounded-md p-3 mb-4">
+                <div className="space-y-3">
                   {chatMessages.map((message, index) => (
-                    <div key={index} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                    <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div
-                        className={cn(
-                          "max-w-[80%] rounded-lg px-4 py-2",
-                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-background border",
-                        )}
+                        className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                        }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        {message.content}
                       </div>
                     </div>
                   ))}
-                  {isChatLoading && (
+                  {isLoading && (
                     <div className="flex justify-start">
-                      <div className="bg-background border rounded-lg px-4 py-2">
-                        <p className="text-sm text-muted-foreground">AI is typing...</p>
-                      </div>
+                      <div className="bg-muted rounded-lg px-3 py-2 text-sm">Thinking...</div>
                     </div>
                   )}
                 </div>
+              </ScrollArea>
 
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Ask about contract terms, legal requirements, or get suggestions..."
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleChatSubmit()}
-                  />
-                  <Button onClick={handleChatSubmit} disabled={isChatLoading || !chatInput.trim()}>
-                    Send
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setChatInput("What should I include in a management contract?")}
-                  >
-                    Management Contract Tips
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setChatInput("How do I set fair royalty rates?")}>
-                    Royalty Rate Guidance
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setChatInput("What are standard contract durations?")}
-                  >
-                    Contract Duration
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setChatInput("Help me with termination clauses")}>
-                    Termination Clauses
-                  </Button>
-                </div>
-              </div>
+              <form onSubmit={handleChatSubmit} className="flex gap-2">
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask about contract terms..."
+                  disabled={isLoading}
+                />
+                <Button type="submit" size="icon" disabled={isLoading}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
+  )
+}
+
+export default function ContractWizard() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto p-6 max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <div className="space-y-2">
+                    <div className="h-6 bg-muted rounded w-48" />
+                    <div className="h-4 bg-muted rounded w-64" />
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-2">
+                    <div className="bg-primary h-2 rounded-full w-1/4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="h-4 bg-muted rounded w-32" />
+                    <div className="h-10 bg-muted rounded" />
+                    <div className="h-4 bg-muted rounded w-40" />
+                    <div className="h-10 bg-muted rounded" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-1">
+              <Card>
+                <CardHeader>
+                  <div className="h-6 bg-muted rounded w-32" />
+                  <div className="h-4 bg-muted rounded w-48" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 bg-muted rounded mb-4" />
+                  <div className="flex gap-2">
+                    <div className="h-10 bg-muted rounded flex-1" />
+                    <div className="h-10 w-10 bg-muted rounded" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <ContractWizardContent />
+    </Suspense>
   )
 }
