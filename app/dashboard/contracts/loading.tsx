@@ -25,11 +25,10 @@ export default function ContractsLoading() {
               <div className="space-y-2">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-              <div className="flex items-center pt-4 space-x-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-16" />
+                <div className="flex items-center pt-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24 ml-4" />
+                </div>
               </div>
             </CardContent>
           </Card>
