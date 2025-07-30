@@ -14,39 +14,26 @@ export default function ContractsLoading() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-16" />
             </CardHeader>
             <CardContent>
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="h-3 w-32 mt-2" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+              <div className="flex items-center pt-4 space-x-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-16" />
+              </div>
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      <div className="grid gap-4">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-40" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center space-x-4">
-                <Skeleton className="h-12 w-12 rounded" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-                <Skeleton className="h-8 w-20" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
       </div>
     </div>
   )
