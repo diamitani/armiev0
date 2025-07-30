@@ -1,231 +1,417 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
 import {
   ArrowLeft,
   Download,
-  Edit,
-  Share,
+  Share2,
+  Wand2,
   FileText,
   Calendar,
-  DollarSign,
   Users,
-  Clock,
-  CheckCircle,
+  DollarSign,
   AlertTriangle,
-  Copy,
-  Mail,
-  Phone,
+  CheckCircle,
+  XCircle,
+  Info,
+  Edit,
 } from "lucide-react"
+import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { format } from "date-fns"
 
-// Mock contract data - in real app this would come from API
-const mockContractData = {
-  "1": {
-    id: "1",
-    title: "Artist Management Agreement - Sarah Johnson",
-    type: "Management",
-    status: "active",
-    parties: ["Sarah Johnson", "Elite Music Management"],
-    counterparty_name: "Sarah Johnson",
-    counterparty_email: "sarah.johnson@email.com",
-    counterparty_phone: "+1 (555) 123-4567",
-    start_date: "2024-01-15",
-    end_date: "2026-01-15",
-    value: 50000,
-    currency: "USD",
-    created_at: "2024-01-10",
-    last_modified: "2024-01-20",
-    terms: `This Artist Management Agreement establishes a professional relationship between the Artist and Manager for career development and business representation.
+// Mock contract data - in real app this would come from API/database
+const contractsData: Record<string, any> = {
+  "artist-management": {
+    id: "artist-management",
+    title: "Artist Management Agreement Template",
+    description:
+      "Comprehensive agreement between artist and manager covering representation, commission, and responsibilities",
+    category: "Management",
+    complexity: "Medium",
+    pages: 8,
+    lastUpdated: "2024-01-15",
+    tags: ["management", "representation", "commission"],
+    keyTerms: [
+      "Management commission rate (typically 15-20%)",
+      "Contract duration and renewal terms",
+      "Scope of management services",
+      "Artist and manager responsibilities",
+      "Termination clauses and conditions",
+      "Expense handling and reimbursement",
+    ],
+    prosAndCons: {
+      pros: [
+        "Clear commission structure and payment terms",
+        "Comprehensive scope of management services",
+        "Standard industry termination clauses",
+        "Balanced rights and responsibilities for both parties",
+      ],
+      cons: [
+        "May require customization for specific career stages",
+        "Commission rates may vary based on artist level",
+        "Complex termination procedures in some cases",
+      ],
+    },
+    content: `ARTIST MANAGEMENT AGREEMENT
 
-MANAGEMENT SERVICES:
-• Career planning and development
-• Booking and scheduling performances
-• Marketing and promotional activities
-• Business negotiations and contract review
-• Financial planning and budgeting assistance
+This Artist Management Agreement ("Agreement") is entered into on ________ ("Effective Date") between:
 
-COMMISSION STRUCTURE:
-• 15% commission on all gross earnings
-• Commission applies to recording, touring, merchandising, and endorsement income
-• Manager entitled to commission for 6 months post-termination on deals secured during term
+ARTIST: ________ ("Artist")
+Address: ________
+Email: ________
 
-RESPONSIBILITIES:
-Artist agrees to:
-• Consult with Manager on all career decisions
-• Provide Manager with complete financial information
-• Give Manager authority to negotiate on Artist's behalf
+MANAGER: ________ ("Manager")
+Address: ________
+Email: ________
 
-Manager agrees to:
-• Devote time and effort to Artist's career
-• Act in Artist's best interests at all times
-• Maintain confidentiality of Artist's personal and business affairs`,
-    additional_terms: `TERMINATION:
-Either party may terminate this agreement with 30 days written notice.
+RECITALS:
+WHEREAS, Artist is a professional recording and performing artist;
+WHEREAS, Manager desires to provide management services to Artist;
+WHEREAS, Artist desires to engage Manager's services;
 
-EXPENSES:
-Manager may incur reasonable expenses on Artist's behalf with prior approval.
+NOW, THEREFORE, the parties agree as follows:
 
-GOVERNING LAW:
-This agreement shall be governed by the laws of [State/Province].`,
+1. ENGAGEMENT
+Artist hereby engages Manager as Artist's sole and exclusive personal manager for the Term of this Agreement.
+
+2. MANAGER'S SERVICES
+Manager agrees to provide the following services:
+- Career guidance and strategic planning
+- Booking and scheduling performances
+- Negotiating contracts and agreements
+- Coordinating with record labels, publishers, and other industry professionals
+- Marketing and promotional activities
+- Financial oversight and budgeting assistance
+
+3. COMMISSION
+Manager shall receive ____% of Artist's Gross Income as commission for services rendered.
+
+4. TERM
+This Agreement shall commence on the Effective Date and continue for a period of ____ years.
+
+5. EXPENSES
+Manager may incur reasonable expenses on Artist's behalf, subject to prior approval for expenses exceeding $____.
+
+6. TERMINATION
+Either party may terminate this Agreement upon ____ days written notice.
+
+[Additional terms and conditions would continue...]
+
+IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
+
+ARTIST: ________________    MANAGER: ________________
+Signature                   Signature
+
+Print Name: ____________    Print Name: ____________
+Date: _________________    Date: _________________`,
   },
-  "2": {
-    id: "2",
-    title: "Recording Contract - The Midnight Band",
-    type: "Recording",
-    status: "pending",
-    parties: ["The Midnight Band", "Sunset Records"],
-    counterparty_name: "Sunset Records",
-    counterparty_email: "contracts@sunsetrecords.com",
-    counterparty_phone: "+1 (555) 987-6543",
-    start_date: "2024-02-01",
-    end_date: "2027-02-01",
-    value: 150000,
-    currency: "USD",
-    created_at: "2024-01-15",
-    last_modified: "2024-01-18",
-    terms: `Recording agreement for the production and distribution of musical recordings.
+  "recording-contract": {
+    id: "recording-contract",
+    title: "Recording Contract Template",
+    description: "Professional recording agreement between artist and record label",
+    category: "Recording",
+    complexity: "High",
+    pages: 12,
+    lastUpdated: "2024-01-20",
+    tags: ["recording", "label", "royalties", "advance"],
+    keyTerms: [
+      "Recording advance and recoupment terms",
+      "Royalty rates and calculation methods",
+      "Album delivery requirements",
+      "Marketing and promotion commitments",
+      "Rights ownership and licensing",
+      "Territory and distribution scope",
+    ],
+    prosAndCons: {
+      pros: [
+        "Professional industry-standard terms",
+        "Clear royalty calculation methods",
+        "Comprehensive rights and obligations",
+        "Built-in marketing and promotion clauses",
+      ],
+      cons: [
+        "Complex recoupment structures",
+        "May favor label over artist in some areas",
+        "Requires careful negotiation of key terms",
+      ],
+    },
+    content: `RECORDING AGREEMENT
 
-RECORDING COMMITMENT:
-• Minimum of 2 full-length albums during the term
-• Each album to contain minimum 10 tracks
-• Studio time and production costs covered by Label
+This Recording Agreement ("Agreement") is made on ________ between:
 
-ADVANCE AND ROYALTIES:
-• $75,000 advance upon signing (recoupable)
-• $75,000 advance upon delivery of first album (recoupable)
-• 12% royalty rate on net receipts after recoupment
-• 50/50 split on synchronization and licensing fees
+ARTIST: ________ ("Artist")
+LABEL: ________ ("Company")
 
-CREATIVE CONTROL:
-• Artist maintains creative control over musical content
-• Label has approval rights over album artwork and marketing materials
-• Artist has right to approve producer selection`,
-    additional_terms: `MARKETING AND PROMOTION:
-Label commits to minimum $50,000 marketing budget per album release.
+1. RECORDING COMMITMENT
+Artist agrees to record and deliver ____ (___) albums during the Term.
 
-TOUR SUPPORT:
-Label may provide tour support up to $25,000 per tour (recoupable).`,
+2. ADVANCES
+Company will pay Artist a recording advance of $________ per album.
+
+3. ROYALTIES
+Artist will receive ____% of net receipts from sales of recordings.
+
+4. TERM
+Initial term of ____ years with options for additional periods.
+
+[Contract continues with detailed terms...]`,
   },
-}
+  "publishing-deal": {
+    id: "publishing-deal",
+    title: "Music Publishing Agreement Template",
+    description: "Contract for publishing rights and royalty collection",
+    category: "Publishing",
+    complexity: "Medium",
+    pages: 10,
+    lastUpdated: "2024-01-18",
+    tags: ["publishing", "royalties", "rights"],
+    keyTerms: [
+      "Publishing rights assignment or administration",
+      "Writer's share retention percentage",
+      "Territory and term of agreement",
+      "Advance payments and recoupment",
+      "Reversion rights and conditions",
+      "Administration fees and costs",
+    ],
+    prosAndCons: {
+      pros: [
+        "Professional royalty collection and administration",
+        "Global reach through sub-publishing networks",
+        "Advance payments for established writers",
+        "Expert sync licensing opportunities",
+      ],
+      cons: [
+        "May require assignment of copyright ownership",
+        "Long-term commitment periods",
+        "Administration fees reduce net income",
+      ],
+    },
+    content: `MUSIC PUBLISHING AGREEMENT
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "active":
-      return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
-    case "draft":
-      return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-    case "expired":
-      return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
-    default:
-      return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
-  }
-}
+Agreement between:
+WRITER: ________ ("Writer")
+PUBLISHER: ________ ("Publisher")
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "active":
-      return <CheckCircle className="w-4 h-4" />
-    case "pending":
-      return <Clock className="w-4 h-4" />
-    case "draft":
-      return <Edit className="w-4 h-4" />
-    case "expired":
-      return <AlertTriangle className="w-4 h-4" />
-    default:
-      return <FileText className="w-4 h-4" />
-  }
+1. GRANT OF RIGHTS
+Writer grants Publisher the right to administer musical compositions.
+
+2. TERM
+Agreement term of ____ years commencing ________.
+
+3. TERRITORY
+Worldwide rights unless otherwise specified.
+
+[Contract continues...]`,
+  },
+  "producer-agreement": {
+    id: "producer-agreement",
+    title: "Producer Agreement Template",
+    description: "Contract between artist and producer for recording services",
+    category: "Production",
+    complexity: "Medium",
+    pages: 6,
+    lastUpdated: "2024-01-22",
+    tags: ["producer", "recording", "points", "credit"],
+    keyTerms: [
+      "Producer fee and payment schedule",
+      "Producer points (royalty percentage)",
+      "Credit requirements and placement",
+      "Delivery specifications and timeline",
+      "Ownership of master recordings",
+      "Additional services and revisions",
+    ],
+    prosAndCons: {
+      pros: [
+        "Clear fee structure and payment terms",
+        "Standard producer point allocations",
+        "Defined creative and technical responsibilities",
+        "Professional credit requirements",
+      ],
+      cons: [
+        "Producer points reduce artist royalties",
+        "May include expensive revision costs",
+        "Complex ownership arrangements possible",
+      ],
+    },
+    content: `PRODUCER AGREEMENT
+
+Agreement between:
+ARTIST: ________ ("Artist")
+PRODUCER: ________ ("Producer")
+
+1. SERVICES
+Producer will produce ____ recordings for Artist.
+
+2. COMPENSATION
+Producer fee: $________
+Producer points: ____% of net receipts
+
+3. CREDITS
+Producer credit: "Produced by ________"
+
+[Contract continues...]`,
+  },
+  "performance-agreement": {
+    id: "performance-agreement",
+    title: "Performance Agreement Template",
+    description: "Live performance booking contract for venues and events",
+    category: "Performance",
+    complexity: "Low",
+    pages: 4,
+    lastUpdated: "2024-01-25",
+    tags: ["performance", "booking", "venue", "live"],
+    keyTerms: [
+      "Performance date, time, and duration",
+      "Venue location and technical specifications",
+      "Performance fee and payment terms",
+      "Cancellation policies and force majeure",
+      "Technical rider and hospitality requirements",
+      "Merchandise and recording rights",
+    ],
+    prosAndCons: {
+      pros: [
+        "Straightforward terms and conditions",
+        "Clear payment and cancellation policies",
+        "Standard technical and hospitality riders",
+        "Flexible for various venue types",
+      ],
+      cons: [
+        "May not cover complex touring scenarios",
+        "Limited protection for weather-related cancellations",
+        "Basic merchandise and recording provisions",
+      ],
+    },
+    content: `PERFORMANCE AGREEMENT
+
+ARTIST: ________ ("Artist")
+VENUE: ________ ("Venue")
+
+PERFORMANCE DETAILS:
+Date: ________
+Time: ________
+Duration: ________
+Fee: $________
+
+TERMS AND CONDITIONS:
+[Performance terms continue...]`,
+  },
+  "collaboration-agreement": {
+    id: "collaboration-agreement",
+    title: "Artist Collaboration Agreement Template",
+    description: "Agreement between collaborating artists for joint projects",
+    category: "Collaboration",
+    complexity: "Medium",
+    pages: 7,
+    lastUpdated: "2024-01-28",
+    tags: ["collaboration", "split", "ownership", "credit"],
+    keyTerms: [
+      "Revenue and ownership splits",
+      "Credit allocation and billing",
+      "Creative control and decision making",
+      "Distribution and licensing rights",
+      "Dispute resolution procedures",
+      "Future collaboration options",
+    ],
+    prosAndCons: {
+      pros: [
+        "Clear ownership and revenue splits",
+        "Defined creative responsibilities",
+        "Professional dispute resolution process",
+        "Flexible collaboration structures",
+      ],
+      cons: [
+        "Complex decision-making processes",
+        "Potential for creative disagreements",
+        "Revenue splits may not reflect actual contributions",
+      ],
+    },
+    content: `ARTIST COLLABORATION AGREEMENT
+
+COLLABORATING ARTISTS:
+Artist 1: ________ (____% ownership)
+Artist 2: ________ (____% ownership)
+
+PROJECT: ________
+
+TERMS:
+Revenue Split: ____% / ____%
+Credit: "Artist 1 feat. Artist 2" or "Artist 1 & Artist 2"
+
+[Agreement continues...]`,
+  },
 }
 
 export default function ContractDetailPage() {
   const params = useParams()
   const router = useRouter()
   const contractId = params.id as string
+  const [activeTab, setActiveTab] = useState("preview")
+  const [isLoading, setIsLoading] = useState(true)
 
-  const [contract, setContract] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const contract = contractsData[contractId]
 
   useEffect(() => {
-    // Check mock data first
-    if (mockContractData[contractId as keyof typeof mockContractData]) {
-      setContract(mockContractData[contractId as keyof typeof mockContractData])
-      setLoading(false)
-      return
-    }
+    // Simulate loading time
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
 
-    // Check localStorage for user-created contracts
-    const storedContracts = localStorage.getItem("user_contracts")
-    if (storedContracts) {
-      const parsedContracts = JSON.parse(storedContracts)
-      const foundContract = parsedContracts.find((c: any) => c.id === contractId)
-      if (foundContract) {
-        setContract(foundContract)
-        setLoading(false)
-        return
-      }
-    }
-
-    // Contract not found
-    setLoading(false)
+    return () => clearTimeout(timer)
   }, [contractId])
 
-  const handleDownload = () => {
+  const handleCreateContract = () => {
+    router.push(`/dashboard/contracts/wizard?template=${contractId}`) // Ensure this link is correct
+  }
+
+  const handleDownloadTemplate = () => {
     if (!contract) return
 
-    const content = `${contract.title}
-
-${contract.terms}
-
-${contract.additional_terms || ""}
-
-Contract Details:
-- Type: ${contract.type}
-- Status: ${contract.status}
-- Start Date: ${contract.start_date}
-- End Date: ${contract.end_date || "N/A"}
-- Value: ${contract.currency} ${contract.value || "N/A"}
-- Parties: ${contract.parties?.join(", ") || `${contract.counterparty_name}`}
-`
-
+    const content = contract.content
     const blob = new Blob([content], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `${contract.title}.txt`
+    a.download = `${contract.title.replace(/\s+/g, "-").toLowerCase()}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    toast.success("Contract downloaded successfully!")
+    toast.success("Template downloaded successfully!")
   }
 
-  const handleShare = () => {
-    const url = window.location.href
-    navigator.clipboard.writeText(url)
-    toast.success("Contract link copied to clipboard!")
-  }
-
-  const handleCopyTerms = () => {
+  const handleShareTemplate = async () => {
     if (!contract) return
-    const terms = `${contract.terms}\n\n${contract.additional_terms || ""}`
-    navigator.clipboard.writeText(terms)
-    toast.success("Contract terms copied to clipboard!")
+
+    try {
+      await navigator.share({
+        title: contract.title,
+        text: contract.description,
+        url: window.location.href,
+      })
+    } catch (error) {
+      // Fallback to copying URL
+      await navigator.clipboard.writeText(window.location.href)
+      toast.success("Link copied to clipboard!")
+    }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="container mx-auto py-6 max-w-4xl">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-12 bg-gray-200 rounded w-3/4 mb-6"></div>
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+          <div className="h-96 bg-gray-200 rounded"></div>
         </div>
       </div>
     )
@@ -233,262 +419,344 @@ Contract Details:
 
   if (!contract) {
     return (
-      <div className="container mx-auto py-6 max-w-4xl">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Contracts
-        </Button>
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center py-12">
+          <FileText className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Contract Template Not Found</h1>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            The contract template you're looking for doesn't exist or may have been moved. Let's help you find the right
+            contract for your needs.
+          </p>
 
-        <Card>
-          <CardContent className="p-12 text-center">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Contract Not Found</h3>
-            <p className="text-muted-foreground mb-4">
-              The contract you're looking for doesn't exist or may have been deleted.
-            </p>
-            <Button onClick={() => router.push("/dashboard/contracts")}>View All Contracts</Button>
-          </CardContent>
-        </Card>
+          <div className="space-y-4">
+            <div className="flex justify-center space-x-4">
+              <Link href="/dashboard/contracts">
+                <Button variant="outline" size="lg">
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  Browse All Contracts
+                </Button>
+              </Link>
+              <Link href="/dashboard/contracts/wizard">
+                <Button size="lg">
+                  <Wand2 className="mr-2 h-5 w-5" />
+                  Start Contract Wizard
+                </Button>
+              </Link>
+            </div>
+
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Popular Contract Templates:</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                {Object.entries(contractsData)
+                  .slice(0, 3)
+                  .map(([key, template]) => (
+                    <Card
+                      key={key}
+                      className="hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => router.push(`/dashboard/contracts/${key}`)}
+                    >
+                      <CardContent className="p-4 text-center">
+                        <h4 className="font-semibold mb-2">{template.title}</h4>
+                        <p className="text-sm text-gray-600 mb-3">{template.description}</p>
+                        <Badge variant="outline">{template.category}</Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
-  return (
-    <div className="container mx-auto py-6 max-w-4xl">
-      {/* Header */}
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Contracts
-        </Button>
+  const getComplexityColor = (complexity: string) => {
+    switch (complexity) {
+      case "Low":
+        return "bg-green-100 text-green-800"
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800"
+      case "High":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{contract.title}</h1>
-            <div className="flex items-center gap-3">
-              <Badge className={getStatusColor(contract.status)}>
-                {getStatusIcon(contract.status)}
-                <span className="ml-1 capitalize">{contract.status}</span>
-              </Badge>
-              <Badge variant="outline">{contract.type}</Badge>
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Link
+            href="/dashboard/contracts"
+            className="flex items-center text-muted-foreground hover:text-foreground mb-2"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Contracts
+          </Link>
+          <h1 className="text-3xl font-bold tracking-tight">{contract.title}</h1>
+          <p className="text-muted-foreground">{contract.description}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleShareTemplate}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Share
+          </Button>
+          <Button variant="outline" onClick={handleDownloadTemplate}>
+            <Download className="mr-2 h-4 w-4" />
+            Download Template
+          </Button>
+          <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleCreateContract}>
+            <Wand2 className="mr-2 h-4 w-4" />
+            Create Contract
+          </Button>
+        </div>
+      </div>
+
+      {/* Contract Info */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">{contract.pages} Pages</p>
+                <p className="text-xs text-muted-foreground">Template length</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className={getComplexityColor(contract.complexity)}>{contract.complexity}</Badge>
+              <div>
+                <p className="text-sm font-medium">Complexity</p>
+                <p className="text-xs text-muted-foreground">Legal complexity</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">{contract.category}</p>
+                <p className="text-xs text-muted-foreground">Contract type</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Updated {contract.lastUpdated}</p>
+                <p className="text-xs text-muted-foreground">Last revision</p>
+              </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleShare}>
-              <Share className="w-4 h-4 mr-2" />
-              Share
-            </Button>
-            <Button variant="outline" onClick={handleDownload}>
-              <Download className="w-4 h-4 mr-2" />
-              Download
-            </Button>
-            <Button>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
+          <Separator className="my-4" />
+          <div className="flex flex-wrap gap-2">
+            {contract.tags.map((tag: string) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Ready to create your contract?</h3>
+              <p className="text-muted-foreground">
+                Use our guided wizard to customize this template with your specific details and requirements.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={handleDownloadTemplate}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Template
+              </Button>
+              <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleCreateContract}>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Start Contract Wizard
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+        <Button
+          variant={activeTab === "preview" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("preview")}
+          className="flex-1"
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          Preview
+        </Button>
+        <Button
+          variant={activeTab === "analysis" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("analysis")}
+          className="flex-1"
+        >
+          <Info className="mr-2 h-4 w-4" />
+          Analysis
+        </Button>
+        <Button
+          variant={activeTab === "customize" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setActiveTab("customize")}
+          className="flex-1"
+        >
+          <Edit className="mr-2 h-4 w-4" />
+          Customize
+        </Button>
       </div>
 
-      {/* Contract Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <Tabs defaultValue="terms" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="terms">Contract Terms</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="documents">Documents</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="terms" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Contract Terms</CardTitle>
-                    <Button variant="outline" size="sm" onClick={handleCopyTerms}>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Terms
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose max-w-none">
-                    <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg">
-                      {contract.terms}
-                      {contract.additional_terms && (
-                        <>
-                          {"\n\n"}
-                          {contract.additional_terms}
-                        </>
-                      )}
-                    </pre>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="timeline" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contract Timeline</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 border rounded-lg">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <div>
-                        <p className="font-medium">Contract Created</p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(contract.created_at), "MMMM d, yyyy")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 p-4 border rounded-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <div>
-                        <p className="font-medium">Contract Start Date</p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(contract.start_date), "MMMM d, yyyy")}
-                        </p>
-                      </div>
-                    </div>
-
-                    {contract.end_date && (
-                      <div className="flex items-center gap-4 p-4 border rounded-lg">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <div>
-                          <p className="font-medium">Contract End Date</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(contract.end_date), "MMMM d, yyyy")}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="documents" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Related Documents</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No additional documents attached</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Contract Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contract Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
+      {/* Tab Content */}
+      {activeTab === "preview" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Contract Template Preview</CardTitle>
+            <CardDescription>Full contract template with fillable fields highlighted</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 p-6 rounded-lg max-h-96 overflow-y-auto">
+              <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed">{contract.content}</pre>
+            </div>
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium">Duration</p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(contract.start_date), "MMM d, yyyy")} -{" "}
-                    {contract.end_date ? format(new Date(contract.end_date), "MMM d, yyyy") : "Ongoing"}
+                  <h4 className="font-semibold text-blue-800 mb-1">Fillable Fields</h4>
+                  <p className="text-sm text-blue-700">
+                    Fields marked with underscores (________) need to be filled in with your specific information. Use
+                    the Contract Wizard for guided completion.
                   </p>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-              {contract.value && (
-                <div className="flex items-center gap-3">
-                  <DollarSign className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Contract Value</p>
-                    <p className="text-sm text-muted-foreground">
-                      {contract.currency} {contract.value.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Last Modified</p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(contract.last_modified), "MMM d, yyyy")}
-                  </p>
-                </div>
-              </div>
+      {activeTab === "analysis" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                Advantages
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {contract.prosAndCons.pros.map((pro: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">{pro}</span>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
 
-          {/* Counterparty Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Counterparty</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-red-600" />
+                Considerations
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">{contract.counterparty_name}</p>
-                  <p className="text-sm text-muted-foreground">Counterparty</p>
-                </div>
-              </div>
-
-              {contract.counterparty_email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-muted-foreground">{contract.counterparty_email}</p>
-                  </div>
-                </div>
-              )}
-
-              {contract.counterparty_phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Phone</p>
-                    <p className="text-sm text-muted-foreground">{contract.counterparty_phone}</p>
-                  </div>
-                </div>
-              )}
+            <CardContent>
+              <ul className="space-y-2">
+                {contract.prosAndCons.cons.map((con: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">{con}</span>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>Key Terms & Clauses</CardTitle>
+              <CardDescription>Important elements covered in this contract template</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start bg-transparent">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Contract
-              </Button>
-              <Button variant="outline" className="w-full justify-start bg-transparent" onClick={handleDownload}>
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
-              </Button>
-              <Button variant="outline" className="w-full justify-start bg-transparent" onClick={handleShare}>
-                <Share className="w-4 h-4 mr-2" />
-                Share Contract
-              </Button>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2">
+                {contract.keyTerms.map((term: string, index: number) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full" />
+                    <span className="text-sm">{term}</span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
-      </div>
+      )}
+
+      {activeTab === "customize" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Customize This Contract</CardTitle>
+            <CardDescription>Use our wizard to create a personalized version of this contract template</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center py-8">
+              <Wand2 className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Ready to customize?</h3>
+              <p className="text-muted-foreground mb-6">
+                Our Contract Wizard will guide you through personalizing this template with your specific details.
+              </p>
+              <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleCreateContract}>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Start Contract Wizard
+              </Button>
+            </div>
+            <Separator />
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="text-center">
+                <Users className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                <h4 className="font-semibold mb-1">Party Details</h4>
+                <p className="text-sm text-muted-foreground">Enter information for all parties involved</p>
+              </div>
+              <div className="text-center">
+                <DollarSign className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                <h4 className="font-semibold mb-1">Financial Terms</h4>
+                <p className="text-sm text-muted-foreground">Set compensation and payment schedules</p>
+              </div>
+              <div className="text-center">
+                <Calendar className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                <h4 className="font-semibold mb-1">Contract Details</h4>
+                <p className="text-sm text-muted-foreground">Specify dates, terms, and requirements</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Legal Disclaimer */}
+      <Card className="border-yellow-200 bg-yellow-50">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-white text-sm font-bold">!</span>
+            </div>
+            <div>
+              <h4 className="font-semibold text-yellow-800 mb-1">Legal Disclaimer</h4>
+              <p className="text-sm text-yellow-700">
+                This contract template is provided for informational purposes only and does not constitute legal advice.
+                Always consult with a qualified attorney before using any legal document. ARMIE is not responsible for
+                any legal issues arising from the use of this template.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

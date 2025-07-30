@@ -1,14 +1,14 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { getStackConfig } from "@/lib/stack-config"
+import type React from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 
 interface User {
   id: string
   email: string
-  name: string
+  name?: string
   artist_name?: string
-  subscription_tier: string
+  avatar_url?: string
 }
 
 interface AuthContextType {
@@ -27,18 +27,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
+}
+
+interface AuthProviderProps {
+  children: React.ReactNode
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [stackConfig, setStackConfig] = useState<any>(null)
-
-  useEffect(() => {
-    // Load Stack configuration
-    getStackConfig().then(setStackConfig)
-
-    // Check if user is already authenticated
-    checkAuth()
-  }, [])
 
   const checkAuth = async () => {
     try {
@@ -47,17 +50,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (response.ok) {
-        const userData = await response.json()
-        setUser(userData.user)
+        const data = await response.json()
+        if (data.success && data.user) {
+          setUser(data.user)
+        } else {
+          setUser(null)
+        }
+      } else {
+        setUser(null)
       }
     } catch (error) {
       console.error("Auth check failed:", error)
+      setUser(null)
     } finally {
       setLoading(false)
     }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch("/api/auth/signin", {
         method: "POST",
@@ -67,6 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
         credentials: "include",
       })
+
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        console.error("Non-JSON response:", text)
+        return { success: false, error: "Server error occurred" }
+      }
 
       const data = await response.json()
 
@@ -82,16 +100,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, name: string, artistName?: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    name: string,
+    artistName?: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password, name, artist_name: artistName }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          artist_name: artistName,
+        }),
         credentials: "include",
       })
+
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        console.error("Non-JSON response:", text)
+        return { success: false, error: "Server error occurred" }
+      }
 
       const data = await response.json()
 
@@ -116,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
     } catch (error) {
       console.error("Sign out error:", error)
+      setUser(null)
     }
   }
 
@@ -123,7 +160,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await checkAuth()
   }
 
-  const value = {
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const value: AuthContextType = {
     user,
     loading,
     signIn,
@@ -133,12 +174,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
 }

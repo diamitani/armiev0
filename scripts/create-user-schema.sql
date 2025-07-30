@@ -2,11 +2,12 @@
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    password VARCHAR(255), -- Optional for OAuth users
-    avatar TEXT,
+    name VARCHAR(255),
+    password_hash VARCHAR(255), -- Optional for OAuth users
+    avatar_url TEXT,
     oauth_provider VARCHAR(50), -- 'google', 'github', etc.
-    oauth_provider_id VARCHAR(255), -- Provider's user ID
+    oauth_id VARCHAR(255), -- Provider's user ID
+    subscription_tier VARCHAR(50) DEFAULT 'free',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -68,7 +69,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_oauth ON users(oauth_provider, oauth_provider_id);
+CREATE INDEX IF NOT EXISTS idx_users_oauth ON users(oauth_provider, oauth_id);
 CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_user_id ON contracts(user_id);

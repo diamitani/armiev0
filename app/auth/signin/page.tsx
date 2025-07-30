@@ -29,10 +29,10 @@ export default function SignIn() {
     try {
       const result = await signIn(email, password)
 
-      if (result.success) {
+      if (result && result.success) {
         router.push("/dashboard")
       } else {
-        setError(result.error || "Sign in failed")
+        setError(result?.error || "Sign in failed")
       }
     } catch (error) {
       console.error("Sign in error:", error)

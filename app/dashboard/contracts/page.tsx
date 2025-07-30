@@ -197,7 +197,9 @@ export default function ContractsPage() {
             {isPremiumUser && <Crown className="w-3 h-3 mr-1" />}
             {user?.plan?.toUpperCase() || "FREE"}
           </Badge>
-          <Link href="/contracts/wizard">
+          <Link href="/dashboard/contracts/wizard">
+            {" "}
+            {/* Updated link */}
             <Button className="bg-armie-secondary text-armie-primary hover:bg-armie-secondary/80">
               <Plus className="w-4 h-4 mr-2" />
               Create Contract
@@ -263,7 +265,7 @@ export default function ContractsPage() {
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="distribution">Distribution</SelectItem>
-            <SelectItem value="publishing">Publishing</SelectItem>
+            <SelectItem value="publishing">PublishItem</SelectItem>
             <SelectItem value="performance">Performance</SelectItem>
             <SelectItem value="collaboration">Collaboration</SelectItem>
             <SelectItem value="licensing">Licensing</SelectItem>
@@ -385,7 +387,9 @@ export default function ContractsPage() {
                 ? "Try adjusting your search or filter criteria"
                 : "Create your first contract to get started with legal document management"}
             </p>
-            <Link href="/contracts/wizard">
+            <Link href="/dashboard/contracts/wizard">
+              {" "}
+              {/* Updated link */}
               <Button className="bg-armie-secondary text-armie-primary hover:bg-armie-secondary/80">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Contract

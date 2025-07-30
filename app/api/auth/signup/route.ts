@@ -1,59 +1,127 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { DatabaseService } from "@/lib/database"
+import { hashPassword } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { email, password, name, artist_name } = body
-
-    // Validate required fields
-    if (!email || !password || !name) {
-      return NextResponse.json({ error: "Email, password, and name are required" }, { status: 400 })
+    // Parse request body with error handling
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError)
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid request format",
+        },
+        { status: 400 },
+      )
     }
 
-    // Ensure all inputs are strings and normalize
-    const emailStr = String(email).toLowerCase().trim()
-    const passwordStr = String(password)
-    const nameStr = String(name).trim()
-    const artistNameStr = artist_name ? String(artist_name).trim() : nameStr
+    const { email, password, name, artist_name } = body
+
+    // Validate input
+    if (!email || !password || !name) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Email, password, and name are required",
+        },
+        { status: 400 },
+      )
+    }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(emailStr)) {
-      return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 })
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Please enter a valid email address",
+        },
+        { status: 400 },
+      )
     }
 
     // Validate password length
-    if (passwordStr.length < 6) {
-      return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 })
+    if (password.length < 6) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Password must be at least 6 characters long",
+        },
+        { status: 400 },
+      )
     }
 
-    // Create new user
-    const newUser = {
-      id: `user-${Date.now()}`,
-      email: emailStr,
-      name: nameStr,
-      artist_name: artistNameStr,
-      subscription_tier: "free",
-      created_at: new Date().toISOString(),
+    // Check if user already exists
+    const existingUser = await DatabaseService.getUserByEmail(email)
+    if (existingUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "An account with this email already exists",
+        },
+        { status: 409 },
+      )
     }
 
-    // Create token
-    const token = Buffer.from(
-      JSON.stringify({
-        userId: newUser.id,
-        email: newUser.email,
-        timestamp: Date.now(),
-      }),
-    ).toString("base64")
+    // Hash password
+    const passwordHash = await hashPassword(password)
 
-    return NextResponse.json({
-      success: true,
-      message: "Welcome to ARMIE! Your music career journey starts now.",
-      user: newUser,
-      token: token,
+    // Create user
+    const newUser = await DatabaseService.createUser({
+      email: email.toLowerCase().trim(),
+      name: name.trim(),
+      password_hash: passwordHash,
+      artist_name: artist_name?.trim() || name.trim(),
     })
+
+    // Remove sensitive data from response
+    const userResponse = {
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
+      artist_name: newUser.artist_name,
+      avatar_url: newUser.avatar_url,
+    }
+
+    // Set authentication cookie
+    const response = NextResponse.json({
+      success: true,
+      user: userResponse,
+      message: "Account created successfully",
+    })
+
+    response.cookies.set("auth-token", `token-${newUser.id}`, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    })
+
+    return response
   } catch (error) {
-    console.error("Signup error:", error)
-    return NextResponse.json({ error: "Account creation failed. Please try again." }, { status: 500 })
+    console.error("Signup API error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "An unexpected error occurred. Please try again.",
+      },
+      { status: 500 },
+    )
   }
+}
+
+// Handle other HTTP methods
+export async function GET() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Method not allowed",
+    },
+    { status: 405 },
+  )
 }

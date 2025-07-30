@@ -18,6 +18,8 @@ import { CalendarIcon, ArrowLeft, ArrowRight, MessageSquare, Download, Copy, Che
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { generateText } from "ai" // Import generateText from AI SDK
+import { openai } from "@ai-sdk/openai" // Import openai model
 
 interface ContractData {
   title: string
@@ -195,44 +197,16 @@ export default function ContractWizard() {
     setIsChatLoading(true)
 
     try {
-      // Mock AI response based on contract type and user input
       const contractTypeInfo = contractTypes.find((t) => t.value === contractData.type)
-      let aiResponse = ""
+      const prompt = `You are an AI assistant specializing in music industry contracts. The user is currently working on a "${contractTypeInfo?.label || "general music contract"}". The user asked: "${userMessage}". Provide helpful, concise advice or information related to this contract type. If the question is general, provide general contract advice. Keep your response under 200 words.`
 
-      if (userMessage.toLowerCase().includes("management")) {
-        aiResponse =
-          "For artist management agreements, key terms typically include commission rates (10-20%), duration (1-3 years), and specific services like booking, marketing, and career development. The manager usually handles day-to-day business affairs while the artist focuses on creative work. Would you like me to help you determine a fair commission rate?"
-      } else if (userMessage.toLowerCase().includes("recording")) {
-        aiResponse =
-          "Recording contracts should specify studio time, production costs, ownership rights, and royalty splits. Typical advances range from $5,000-$50,000 for independent artists, with royalty rates between 10-15% of net receipts. The label usually owns the master recordings. What's your expected budget and royalty structure?"
-      } else if (userMessage.toLowerCase().includes("performance")) {
-        aiResponse =
-          "Performance agreements need to cover venue details, technical requirements, payment terms, and cancellation policies. Standard payment is 50% deposit, 50% on completion. Make sure to include your technical rider for sound, lighting, and hospitality requirements. What type of venue is this for?"
-      } else if (userMessage.toLowerCase().includes("publishing")) {
-        aiResponse =
-          "Publishing deals involve either assignment or administration of your copyrights. Administration deals (10-20% fee) let you keep ownership, while assignment deals (50% ownership) often include advances. Consider territory, term length, and reversion rights. Are you looking for administration or assignment?"
-      } else if (userMessage.toLowerCase().includes("producer")) {
-        aiResponse =
-          "Producer agreements typically include an upfront fee plus 2-4 producer points (percentage of royalties). Make sure to specify deliverables, revision limits, and credit requirements. The producer usually gets credit as 'Produced by [Name]'. What's your budget for production?"
-      } else if (userMessage.toLowerCase().includes("collaboration")) {
-        aiResponse =
-          "Collaboration agreements should clearly define ownership splits (often 50/50), credit allocation, and decision-making processes. Consider how you'll handle future licensing, sync opportunities, and potential disputes. Will this be an equal partnership or does one artist have more creative control?"
-      } else {
-        aiResponse = `Great question about ${contractTypeInfo?.label || "your contract"}! ${contractTypeInfo?.description || "This type of agreement"} typically includes specific terms about responsibilities, compensation, and duration. 
+      const { text } = await generateText({
+        model: openai("gpt-4o"), // Using OpenAI's gpt-4o model
+        prompt: prompt,
+      })
 
-Key considerations for this contract type:
-• Clear definition of roles and responsibilities
-• Fair compensation structure
-• Reasonable term length with renewal options
-• Termination clauses that protect both parties
-
-What specific aspect would you like to focus on first?`
-      }
-
-      setTimeout(() => {
-        setChatMessages((prev) => [...prev, { role: "assistant", content: aiResponse }])
-        setIsChatLoading(false)
-      }, 1000)
+      setChatMessages((prev) => [...prev, { role: "assistant", content: text }])
+      setIsChatLoading(false)
     } catch (error) {
       console.error("Chat error:", error)
       setChatMessages((prev) => [

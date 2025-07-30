@@ -98,13 +98,15 @@ What specific aspect of your music career would you like to focus on? I'm here t
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: [userMessage],
-          assistantType: "armie",
+          message: userMessage.content, // Corrected: Send content directly as 'message'
+          // Removed: assistantType as it's not used by this API
         }),
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        // Parse error response from server if available
+        const errorData = await response.json()
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error || "Unknown error"}`)
       }
 
       const reader = response.body?.getReader()
@@ -146,13 +148,16 @@ What specific aspect of your music career would you like to focus on? I'm here t
               }
             } catch (e) {
               // Ignore parsing errors for streaming
+              console.warn("Failed to parse streaming chunk:", e, "Chunk:", data)
             }
           }
         }
       }
     } catch (error) {
       console.error("Chat error:", error)
-      toast.error("Failed to send message. Please try again.")
+      toast.error(
+        `Failed to send message: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
+      )
 
       // Add error message
       const errorMessage: Message = {

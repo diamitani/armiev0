@@ -1,86 +1,93 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { DatabaseService } from "@/lib/database"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // Parse request body with error handling
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError)
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid request format",
+        },
+        { status: 400 },
+      )
+    }
+
     const { email, password } = body
 
     // Validate input
     if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Email and password are required",
+        },
+        { status: 400 },
+      )
     }
 
-    // Ensure email is a string and normalize
-    const emailStr = String(email).toLowerCase().trim()
-    const passwordStr = String(password)
+    // Verify user credentials
+    const user = await DatabaseService.verifyUserPassword(email, password)
 
-    // Demo user for testing
-    const demoUser = {
-      id: "demo-user-123",
-      email: "demo@armiemusic.com",
-      password: "password",
-      name: "Demo Artist",
-      artist_name: "Demo Artist",
-      subscription_tier: "pro",
-      created_at: new Date().toISOString(),
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid email or password",
+        },
+        { status: 401 },
+      )
     }
 
-    // Check if it's the demo user
-    if (emailStr === demoUser.email && passwordStr === demoUser.password) {
-      const token = Buffer.from(
-        JSON.stringify({
-          userId: demoUser.id,
-          email: demoUser.email,
-          timestamp: Date.now(),
-        }),
-      ).toString("base64")
-
-      const userResponse = {
-        id: demoUser.id,
-        email: demoUser.email,
-        name: demoUser.name,
-        artist_name: demoUser.artist_name,
-        subscription_tier: demoUser.subscription_tier,
-        created_at: demoUser.created_at,
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: "Welcome back to ARMIE!",
-        user: userResponse,
-        token: token,
-      })
+    // Remove sensitive data from response
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      artist_name: user.artist_name,
+      avatar_url: user.avatar_url,
     }
 
-    // For any other email/password combination, create a new user
-    const emailParts = emailStr.includes("@") ? emailStr.split("@") : [emailStr]
-    const username = emailParts[0] || "Artist"
-
-    const newUser = {
-      id: `user-${Date.now()}`,
-      email: emailStr,
-      name: username.charAt(0).toUpperCase() + username.slice(1),
-      artist_name: username.charAt(0).toUpperCase() + username.slice(1),
-      subscription_tier: "free",
-      created_at: new Date().toISOString(),
-    }
-
-    const token = Buffer.from(
-      JSON.stringify({
-        userId: newUser.id,
-        email: newUser.email,
-        timestamp: Date.now(),
-      }),
-    ).toString("base64")
-
-    return NextResponse.json({
+    // Set authentication cookie
+    const response = NextResponse.json({
       success: true,
-      message: "Welcome to ARMIE!",
-      user: newUser,
-      token: token,
+      user: userResponse,
+      message: "Signed in successfully",
     })
+
+    response.cookies.set("auth-token", `token-${user.id}`, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    })
+
+    return response
   } catch (error) {
-    console.error("Signin error:", error)
-    return NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 })
+    console.error("Signin API error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "An unexpected error occurred. Please try again.",
+      },
+      { status: 500 },
+    )
   }
+}
+
+// Handle other HTTP methods
+export async function GET() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Method not allowed",
+    },
+    { status: 405 },
+  )
 }
