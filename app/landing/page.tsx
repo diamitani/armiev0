@@ -1,388 +1,306 @@
 "use client"
 
+import type React from "react"
+
+import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Music, FileText, Users, TrendingUp, Shield, Zap, ArrowRight, Star, Sparkles } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Sparkles, ArrowRight, ShieldCheck, FileText, Camera, Megaphone, ClipboardList, Building2 } from "lucide-react"
+
+type ChatMessage = {
+  role: "user" | "assistant"
+  content: string
+}
 
 export default function LandingPage() {
+  const router = useRouter()
+  const [prompt, setPrompt] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const q = prompt.trim()
+    if (!q || isSubmitting) return
+
+    // Optimistically add the user message
+    setMessages((prev) => [...prev, { role: "user", content: q }])
+    setIsSubmitting(true)
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: q }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}) as any)
+        throw new Error(err?.error || "Failed to reach assistant")
+      }
+
+      const data = (await res.json()) as { text: string }
+      setMessages((prev) => [...prev, { role: "assistant", content: data.text }])
+      setPrompt("")
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "I ran into an issue responding just now. Please try again, or open the full ARMIE Chat to continue.",
+        },
+      ])
+      // eslint-disable-next-line no-console
+      console.error(err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  function scrollToFeatures() {
+    const el = document.getElementById("features")
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-white/10 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-              <Music className="w-5 h-5 text-white" />
+    <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      {/* Background gradient blobs */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-24 -left-24 h-[40rem] w-[40rem] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(147,51,234,0.35),transparent_60%)] blur-3xl" />
+        <div className="absolute -bottom-32 -right-24 h-[46rem] w-[46rem] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(244,63,94,0.28),transparent_60%)] blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.18),transparent_60%)] blur-3xl" />
+        {/* Subtle vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.7))]" />
+        {/* Fine film grain */}
+        <div className="absolute inset-0 opacity-[0.18] [background-image:radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:3px_3px]" />
+      </div>
+
+      {/* Top Navigation */}
+      <header className="relative z-10 border-b border-white/10/0 bg-black/20 backdrop-blur supports-[backdrop-filter]:bg-black/30">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-purple-500 to-indigo-500">
+              <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">ARMIE</span>
+            <span className="text-lg font-semibold tracking-tight">ARMIE</span>
           </div>
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-gray-300 hover:text-white transition-colors">
+          <nav className="hidden items-center gap-8 md:flex">
+            <button
+              onClick={scrollToFeatures}
+              className="text-sm text-white/80 hover:text-white"
+              aria-label="Scroll to features"
+            >
               Features
-            </Link>
-            <Link href="#pricing" className="text-gray-300 hover:text-white transition-colors">
-              Pricing
-            </Link>
-            <Link href="#about" className="text-gray-300 hover:text-white transition-colors">
+            </button>
+            <Link href="/about" className="text-sm text-white/80 hover:text-white">
               About
             </Link>
-          </nav>
-          <div className="flex items-center space-x-4">
-            <Link href="/auth/signin">
-              <Button variant="ghost" className="text-white hover:bg-white/10">
-                Sign In
-              </Button>
+            <Link href="/auth/signin" className="text-sm text-white/80 hover:text-white">
+              Sign In
             </Link>
             <Link href="/auth/signup">
-              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-                Get Started Free
+              <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
+                Sign Up
               </Button>
             </Link>
-          </div>
+          </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center">
-          <Badge className="mb-6 bg-purple-500/20 text-purple-300 border-purple-500/30">
-            <Sparkles className="w-4 h-4 mr-2" />
-            AI-Powered Artist Management
-          </Badge>
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-            The Future of
-            <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-              {" "}
-              Artist Management
-            </span>
+      {/* Hero */}
+      <section className="relative z-10 flex min-h-[calc(100vh-64px)] items-center">
+        <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-4 text-center">
+          <h1 className="mb-6 text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
+            Your A.I. Powered Music Business Assistant
           </h1>
-          <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-            Streamline your music career with AI-powered contract management, marketing automation, and intelligent
-            career insights. Built for artists, by artists.
+          <p className="mb-8 max-w-2xl text-balance text-white/80 sm:text-lg">
+            Plan releases, generate contracts, create cover art, and grow your audience — all from one dashboard. Let
+            ARMIE turn your ideas into daily, actionable steps.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/signup">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-4"
-              >
-                Start Your Journey
-                <ArrowRight className="ml-2 w-5 h-5" />
+
+          {/* Assistant Input */}
+          <form
+            onSubmit={handleSubmit}
+            className="mb-5 flex w-full max-w-2xl items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2 shadow-lg backdrop-blur-md"
+            aria-label="Ask ARMIE assistant"
+          >
+            <Input
+              aria-label="Ask ARMIE anything"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Ask ARMIE to draft a booking contract, plan your EP rollout, or create a 30‑day growth plan..."
+              className="h-12 flex-1 border-0 bg-transparent text-base text-white placeholder:text-white/50 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-12 gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-rose-600 px-5 text-white hover:from-purple-700 hover:to-rose-700 disabled:opacity-70"
+            >
+              {isSubmitting ? "Thinking..." : "Ask ARMIE"}
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </form>
+
+          {/* Inline conversation preview */}
+          {messages.length > 0 && (
+            <div
+              className="mb-6 w-full max-w-2xl rounded-xl border border-white/10 bg-white/5 p-4 text-left shadow-sm backdrop-blur"
+              role="region"
+              aria-live="polite"
+            >
+              <ul className="space-y-3">
+                {messages.map((m, idx) => (
+                  <li key={idx} className="flex gap-3">
+                    <div
+                      className={`mt-1 h-6 w-6 shrink-0 rounded-full ${
+                        m.role === "user"
+                          ? "bg-gradient-to-br from-indigo-500 to-purple-500"
+                          : "bg-gradient-to-br from-rose-500 to-purple-600"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <p className="whitespace-pre-wrap text-sm text-white/90">{m.content}</p>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 flex gap-2">
+                <Link href="/dashboard/assistants/armie-chat">
+                  <Button variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
+                    Continue in ARMIE Chat
+                  </Button>
+                </Link>
+                <Button
+                  onClick={() => setMessages([])}
+                  variant="ghost"
+                  className="text-white/80 hover:bg-white/10 hover:text-white"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={scrollToFeatures}
+              className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+            >
+              Explore features
+            </Button>
+            <Link href="/dashboard/assistants/armie-chat">
+              <Button variant="ghost" className="text-white hover:bg-white/10">
+                Open ARMIE Chat
               </Button>
             </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 text-lg px-8 py-4 bg-transparent"
-            >
-              Watch Demo
-            </Button>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">Everything You Need to Succeed</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Comprehensive tools designed to elevate your music career to the next level
+      {/* Isolated Features Section */}
+      <section id="features" className="relative z-10 border-t border-white/10 bg-black/40 py-20 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Built for modern artists</h2>
+            <p className="mt-3 text-white/70">
+              Everything you need to manage your career — strategy, creative, admin, and growth — in one place.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mb-4">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Smart Contracts</CardTitle>
-                <CardDescription className="text-gray-300">
-                  AI-powered contract generation and management for all your music business needs
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg flex items-center justify-center mb-4">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Career Analytics</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Data-driven insights to track your progress and optimize your career strategy
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Network Management</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Organize and nurture your professional relationships with industry contacts
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-white">AI Assistant</CardTitle>
-                <CardDescription className="text-gray-300">
-                  24/7 AI-powered assistant to help with creative decisions and business strategy
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Legal Protection</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Comprehensive legal templates and guidance to protect your creative work
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mb-4">
-                  <Star className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-white">Brand Building</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Tools and strategies to build and maintain your unique artist brand
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 px-4 bg-black/20">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">Trusted by Artists Worldwide</h2>
-            <p className="text-xl text-gray-300">See what artists are saying about ARMIE</p>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Contracts */}
+            <FeatureCard
+              icon={<FileText className="h-5 w-5" />}
+              title="Music Contract Assistant"
+              description="Generate, edit, and understand agreements with AI guidance — from management to booking and beyond."
+              href="/dashboard/contracts/wizard"
+            />
+            {/* Cover Art */}
+            <FeatureCard
+              icon={<Camera className="h-5 w-5" />}
+              title="Cover Art Generator"
+              description="Create professional artwork and keep assets organized for releases and promos."
+              href="/dashboard/assistants/cover-art-generator"
+            />
+            {/* Tasks */}
+            <FeatureCard
+              icon={<ClipboardList className="h-5 w-5" />}
+              title="Task & Release Planner"
+              description="Turn goals into daily tasks and auto-schedule what matters most."
+              href="/dashboard"
+            />
+            {/* Social */}
+            <FeatureCard
+              icon={<Megaphone className="h-5 w-5" />}
+              title="Social Media Assistant"
+              description="Draft posts, create content calendars, and stay on-brand across platforms."
+              href="/dashboard/assistants/social-media-assistant"
+            />
+            {/* EPK */}
+            <FeatureCard
+              icon={<ShieldCheck className="h-5 w-5" />}
+              title="EPK & Press Tools"
+              description="Generate EPKs and press releases that are ready to pitch."
+              href="/dashboard/assistants/press-release-generator"
+            />
+            {/* EIN */}
+            <FeatureCard
+              icon={<Building2 className="h-5 w-5" />}
+              title="EIN & Business Setup"
+              description="Guided steps to register your business and get tax-ready."
+              href="/dashboard/assistants/ein-manager"
+            />
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardContent className="pt-6">
-                <div className="flex items-center mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-300 mb-4">
-                  "ARMIE transformed how I manage my music career. The contract templates alone saved me thousands in
-                  legal fees."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold">JS</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">Jordan Smith</p>
-                    <p className="text-gray-400 text-sm">Independent Artist</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardContent className="pt-6">
-                <div className="flex items-center mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-300 mb-4">
-                  "The AI assistant is like having a personal manager available 24/7. It's helped me make better
-                  business decisions."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold">MR</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">Maya Rodriguez</p>
-                    <p className="text-gray-400 text-sm">Singer-Songwriter</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-              <CardContent className="pt-6">
-                <div className="flex items-center mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-300 mb-4">
-                  "Finally, a platform that understands the modern music industry. ARMIE is essential for any serious
-                  artist."
-                </p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-white font-semibold">AC</span>
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold">Alex Chen</p>
-                    <p className="text-gray-400 text-sm">Producer & Artist</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">Ready to Transform Your Music Career?</h2>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of artists who are already using ARMIE to manage and grow their careers
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="mt-12 flex justify-center">
             <Link href="/auth/signup">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-4"
-              >
-                Get Started Free
-                <ArrowRight className="ml-2 w-5 h-5" />
+              <Button className="gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 px-6 hover:from-purple-700 hover:to-indigo-700">
+                Get started free
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
-          <p className="text-gray-400 text-sm mt-4">No credit card required • 14-day free trial • Cancel anytime</p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-12 px-4">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                  <Music className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-white">ARMIE</span>
-              </div>
-              <p className="text-gray-400">
-                Empowering artists with AI-powered management tools for the modern music industry.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4">Product</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Features
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Pricing
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    API
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Integrations
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4">Company</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    About
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Careers
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4">Support</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Documentation
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Community
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                    Status
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400">© 2024 ARMIE. All rights reserved.</p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                Privacy
-              </Link>
-              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                Terms
-              </Link>
-              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                Cookies
-              </Link>
-            </div>
-          </div>
+      <footer className="relative z-10 border-t border-white/10 py-10 text-center text-sm text-white/60">
+        <div className="mx-auto max-w-7xl px-4">
+          <p>© {new Date().getFullYear()} ARMIE. All rights reserved.</p>
         </div>
       </footer>
-    </div>
+    </main>
+  )
+}
+
+function FeatureCard({
+  icon,
+  title,
+  description,
+  href,
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  href: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="group relative block rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm outline-none transition hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-purple-500"
+    >
+      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-rose-600 text-white">
+        {icon}
+      </div>
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className="mt-2 text-sm text-white/70">{description}</p>
+      <div className="mt-4 inline-flex items-center gap-1 text-sm text-white/80">
+        Learn more
+        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+      </div>
+    </Link>
   )
 }

@@ -1,19 +1,21 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client"
+
+type Provider = "google" | "github" | "apple" | "discord" | "facebook" | "twitter" | "spotify"
 
 interface User {
   id: string
-  email: string
-  name?: string
-  artist_name?: string
-  avatar_url?: string
+  email?: string
+  user_metadata?: Record<string, any>
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
+  envMissing: boolean
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signUp: (
     email: string,
@@ -21,6 +23,10 @@ interface AuthContextType {
     name: string,
     artistName?: string,
   ) => Promise<{ success: boolean; error?: string }>
+  signInWithOAuth: (
+    provider: Provider,
+    options?: { redirectTo?: string; queryParams?: Record<string, string> },
+  ) => Promise<void>
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -28,150 +34,111 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider")
+  return ctx
 }
 
-interface AuthProviderProps {
-  children: React.ReactNode
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const envMissing = !isSupabaseConfigured()
+  const supabase = getSupabaseClient()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const checkAuth = async () => {
+  const loadUser = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/me", {
-        credentials: "include",
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.user) {
-          setUser(data.user)
-        } else {
-          setUser(null)
-        }
-      } else {
-        setUser(null)
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error)
+      const { data } = await supabase.auth.getUser()
+      setUser((data.user as unknown as User) ?? null)
+    } catch {
       setUser(null)
     } finally {
       setLoading(false)
     }
-  }
-
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      })
-
-      // Check if response is JSON
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("Non-JSON response:", text)
-        return { success: false, error: "Server error occurred" }
-      }
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setUser(data.user)
-        return { success: true }
-      } else {
-        return { success: false, error: data.error || "Sign in failed" }
-      }
-    } catch (error) {
-      console.error("Sign in error:", error)
-      return { success: false, error: "Network error occurred" }
-    }
-  }
-
-  const signUp = async (
-    email: string,
-    password: string,
-    name: string,
-    artistName?: string,
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          name,
-          artist_name: artistName,
-        }),
-        credentials: "include",
-      })
-
-      // Check if response is JSON
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("Non-JSON response:", text)
-        return { success: false, error: "Server error occurred" }
-      }
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setUser(data.user)
-        return { success: true }
-      } else {
-        return { success: false, error: data.error || "Sign up failed" }
-      }
-    } catch (error) {
-      console.error("Sign up error:", error)
-      return { success: false, error: "Network error occurred" }
-    }
-  }
-
-  const signOut = async () => {
-    try {
-      await fetch("/api/auth/signout", {
-        method: "POST",
-        credentials: "include",
-      })
-      setUser(null)
-    } catch (error) {
-      console.error("Sign out error:", error)
-      setUser(null)
-    }
-  }
-
-  const refreshUser = async () => {
-    await checkAuth()
-  }
+  }, [supabase])
 
   useEffect(() => {
-    checkAuth()
-  }, [])
+    loadUser()
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser((session?.user as unknown as User) ?? null)
+    })
+    return () => {
+      sub.subscription.unsubscribe()
+    }
+  }, [supabase, loadUser])
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-    refreshUser,
-  }
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) return { success: false, error: error.message }
+        setUser((data.user as unknown as User) ?? null)
+        return { success: true }
+      } catch (e: any) {
+        return { success: false, error: e?.message || "Sign in failed" }
+      }
+    },
+    [supabase],
+  )
+
+  const signUp = useCallback(
+    async (email: string, password: string, name: string, artistName?: string) => {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              artist_name: artistName,
+            },
+          },
+        })
+        if (error) return { success: false, error: error.message }
+        setUser((data.user as unknown as User) ?? null)
+        return { success: true }
+      } catch (e: any) {
+        return { success: false, error: e?.message || "Sign up failed" }
+      }
+    },
+    [supabase],
+  )
+
+  const signInWithOAuth = useCallback(
+    async (provider: Provider, options?: { redirectTo?: string; queryParams?: Record<string, string> }) => {
+      const redirectTo = options?.redirectTo || `${window.location.origin}/auth/callback?next=/dashboard`
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          queryParams: options?.queryParams,
+        },
+      })
+    },
+    [supabase],
+  )
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+  }, [supabase])
+
+  const refreshUser = useCallback(async () => {
+    await loadUser()
+  }, [loadUser])
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      loading,
+      envMissing,
+      signIn,
+      signUp,
+      signInWithOAuth,
+      signOut,
+      refreshUser,
+    }),
+    [user, loading, envMissing, signIn, signUp, signInWithOAuth, signOut, refreshUser],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
